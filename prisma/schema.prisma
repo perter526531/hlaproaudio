@@ -1,0 +1,142 @@
+// AudioCenter-style bilingual showcase site schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Site admin user (single-tenant, simple auth)
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// A site page: home, about, products, solutions, contact, news
+model SitePage {
+  id              String   @id @default(cuid())
+  slug            String   @unique // home, about, products, solutions, contact
+  titleEn         String
+  titleCn         String
+  bannerImage     String?
+  bannerTitleEn   String?
+  bannerTitleCn   String?
+  bannerSubEn     String?
+  bannerSubCn     String?
+  metaEn          String?
+  metaCn          String?
+  contentBlocks   ContentBlock[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// Reorderable content block on a page (text / image / hero / feature-grid)
+model ContentBlock {
+  id         String   @id @default(cuid())
+  pageId     String
+  page       SitePage @relation(onDelete: Cascade, fields: [pageId], references: [id])
+  type       String   // text | image | hero | features | quote | stats
+  titleEn    String?
+  titleCn    String?
+  contentEn  String?
+  contentCn  String?
+  image      String?
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([pageId])
+}
+
+/// 3-level product category tree (parentId null = level 1)
+model Category {
+  id        String   @id @default(cuid())
+  parentId  String?
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryTree")
+  nameEn    String
+  nameCn    String
+  descEn    String?
+  descCn    String?
+  icon      String?
+  order     Int      @default(0)
+  products  Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    Category @relation(onDelete: Cascade, fields: [categoryId], references: [id])
+  nameEn      String
+  nameCn      String
+  shortDescEn String?
+  shortDescCn  String?
+  descEn      String?
+  descCn      String?
+  specs       String? // JSON string of {labelEn,labelCn,valueEn,valueCn}[]
+  coverImage  String?
+  status      String   @default("listed") // listed | unlisted
+  featured    Boolean  @default(false)
+  order       Int      @default(0)
+  images      ProductImage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(onDelete: Cascade, fields: [productId], references: [id])
+  url       String
+  alt       String?
+  order     Int     @default(0)
+
+  @@index([productId])
+}
+
+/// Visitor form submissions (company name, contact person, phone, requirements)
+model FormSubmission {
+  id           String   @id @default(cuid())
+  companyName  String
+  contactPerson String
+  phone        String
+  email        String?
+  requirements String
+  sourcePage   String?
+  status       String   @default("new") // new | read | replied
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// Site-wide settings (contact info, logo, etc.) - single row
+model SiteSetting {
+  id            String   @id @default(cuid())
+  logo          String?
+  phoneEn       String?
+  phoneCn       String?
+  emailEn       String?
+  emailCn       String?
+  addressEn     String?
+  addressCn     String?
+  whatsapp      String?
+  wechat        String?
+  facebook      String?
+  youtube       String?
+  instagram     String?
+  linkedin      String?
+  copyrightEn   String?
+  copyrightCn   String?
+  updatedAt     DateTime @updatedAt
+}
