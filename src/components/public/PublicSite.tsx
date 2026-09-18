@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Shield } from "lucide-react";
 import { useNav, type Route } from "@/store/nav";
+import { useI18n } from "@/store/i18n";
 import { Header } from "@/components/public/Header";
 import { Footer } from "@/components/public/Footer";
 import { HomePage } from "@/components/public/HomePage";
@@ -25,6 +26,7 @@ export function PublicSite() {
   const route = useNav((s) => s.route);
   const navToken = useNav((s) => s.navToken);
   const setAdminMode = useNav((s) => s.setAdminMode);
+  const lang = useI18n((s) => s.lang);
 
   // Scroll to top whenever the route changes.
   useEffect(() => {
@@ -32,6 +34,14 @@ export function PublicSite() {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
   }, [navToken]);
+
+  // Keep the document's lang attribute in sync with the UI language so screen
+  // readers use the right voice profile (the SSR layout hardcodes "zh").
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+    }
+  }, [lang]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

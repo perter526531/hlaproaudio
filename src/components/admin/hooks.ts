@@ -267,6 +267,7 @@ export function useDeleteCategory(): UseMutationResult<
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["categories"] });
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -325,6 +326,7 @@ export function useCreateProduct(): UseMutationResult<
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -346,8 +348,10 @@ export function useUpdateProduct(): UseMutationResult<
         body: JSON.stringify(payload),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product", vars.id] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -361,8 +365,10 @@ export function useDeleteProduct(): UseMutationResult<
   return useMutation({
     mutationFn: (id) =>
       jfetch<{ ok: true }>(`/api/products/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
+    onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product", id] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -381,7 +387,8 @@ export function useAddProductImage(): UseMutationResult<
       }),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["products", vars.productId] });
+      qc.invalidateQueries({ queryKey: ["product", vars.productId] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -402,8 +409,10 @@ export function useUpdateProductImage(): UseMutationResult<
         `/api/products/${productId}/images/${imageId}`,
         { method: "PUT", body: JSON.stringify(data) }
       ),
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product", vars.productId] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }
@@ -420,8 +429,10 @@ export function useDeleteProductImage(): UseMutationResult<
         `/api/products/${productId}/images/${imageId}`,
         { method: "DELETE" }
       ),
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product", vars.productId] });
+      qc.invalidateQueries({ queryKey: ["product"] });
     },
   });
 }

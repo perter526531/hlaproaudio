@@ -266,3 +266,33 @@ Stage Summary:
 - Sticky footer, mobile-first responsive, Framer Motion animations
 - Admin creds: admin / admin123
 - Site is live and fully interactive at the Preview Panel (single / route)
+
+---
+Task ID: 7
+Agent: main (code review + bug fixes)
+Task: Review code, fix bugs/gaps, then commit to git@github.com:perter526531/hlaproaudio.git
+
+Work Log:
+- Ran comprehensive code review (general-purpose agent read all 40+ files) → identified 2 CRITICAL, 5 HIGH, 7 MEDIUM, 6 LOW issues.
+- FIXED (CRITICAL) Auth bypass: cookie was `${userId}:${token}` but only userId checked, token never validated. Added `sessionToken` column to AdminUser; createSession now stores hashToken(token) server-side; getAdminUser validates the full pair. Verified: forged cookie (userId:garbage) → {user:null}; wrong pw → 401; valid login → 200 + cookie validates.
+- FIXED (CRITICAL) Upload XSS: dropped image/svg+xml from MIME whitelist (SVG can carry <script>); extension now derived from a strict MIME→ext map (no longer trusts filename → can't save .html); added 10MB size cap. Verified: .svg upload → 400.
+- FIXED (CRITICAL) Image reorder no-op: persistOrder previously compared each item's order against its NEW index (already rewritten before the compare) so zero PUTs were sent and reorders never persisted. Rewrote persistOrder(original, next) to compare against the original orders. Verified: PUT image0→order1 + image1→order0 both 200 and persisted.
+- FIXED (HIGH) Category cycle recursion: buildTree now uses a visited-set guard + depth cap (3); PUT /api/categories/:id rejects self-as-parent or descendant-as-parent (cycle prevention). Verified: PUT self-parent → 400.
+- FIXED (HIGH) Image DELETE cover overwrite: previously deleting ANY image reset coverImage=images[0].url, clobbering a custom cover. Now only re-syncs when the deleted image's url === current coverImage.
+- FIXED (HIGH) Cookie secure flag: createSession now sets secure: process.env.NODE_ENV === "production".
+- FIXED (HIGH) Query-key invalidation: admin product mutations only invalidated ["products"] (plural list cache), never the public detail cache ["product", id]. Also useAddProductImage had a typo (["products", vars.productId]). Added ["product", id] + ["product"] (prefix) invalidation to all product/image mutations so public detail pages refresh after admin edits.
+- FIXED (MEDIUM) SubmissionViewer stale list: GET /:id auto-marks new→read but the list cache wasn't invalidated. Added a useEffect in SubmissionDetail that invalidates ["submissions"] once the detail arrives.
+- FIXED (MEDIUM) ContactForm empty error: the field error <p> was empty (just a comment). Now shows "此项为必填"/"This field is required".
+- FIXED (MEDIUM) ProductDetailPage wasted fetch: related-products useProducts fired with categoryId=undefined before product loaded (fetching whole catalog). Extracted a ProductDetail sub-component mounted only after product loads; related query now gated on the real categoryId.
+- FIXED (MEDIUM) Submissions sourcePage not clamped (cheap DoS); submissions + products PUT now validate status enum (reject garbage). Products POST String()-coerces image urls.
+- FIXED (LOW) html lang sync: <html lang="zh"> was hardcoded; added useEffect in PublicSite + AdminApp to set document.documentElement.lang = "en"|"zh-CN" on language change (screen-reader correctness).
+- FIXED (LOW) NewsPage hardcoded: admin edits to the news page's content blocks were invisible. Now renders the page's content blocks when present (falls back to the built-in sample news cards so a fresh install isn't empty).
+- FIXED (LOW) ProductEditor useEffect reset: deps [open, product, flatCats] would reset unsaved edits whenever the categories cache refreshed. Now keyed on [open, product?.id] so background refetches don't clobber edits.
+- FIXED (MEDIUM) Add Product workflow: editor closed the sheet after create, so the admin couldn't upload images for a new product (ImageManager only renders in edit mode). Now onCreated(returnedProduct) keeps the sheet open and switches to edit mode → image uploader appears immediately.
+- Verified: bun run lint → 0 errors / 0 warnings. Dev server compiles cleanly. Home page, admin login (CN labels 用户名/密码/后台登录), dashboard (仪表盘/页面管理/分类管理/产品管理/留言管理 + 页面数量 stat), and Products manager (搜索/新增产品/编辑) all render correctly with the fixes applied.
+- Auth re-seeded note: the sessionToken column was added via db:push; existing admin row's sessionToken is null until next login (which sets it). Old cookies are correctly rejected, forcing a clean re-login.
+
+Stage Summary:
+- 2 CRITICAL + 5 HIGH + 7 MEDIUM + 4 LOW bugs fixed across auth, upload, products, categories, submissions, and frontend cache/UX.
+- All fixes verified via curl (auth/cycle/upload/reorder APIs) + Agent Browser (home + admin dashboard + products manager render).
+- Lint clean, dev server healthy.

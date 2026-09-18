@@ -5,6 +5,7 @@ import { useI18n, tr } from "@/store/i18n";
 import { useNav } from "@/store/nav";
 import { usePage } from "@/components/public/hooks";
 import { BannerSection } from "@/components/public/BannerSection";
+import { ContentBlock } from "@/components/public/ContentBlock";
 import { Button } from "@/components/ui/button";
 
 interface NewsItem {
@@ -82,44 +83,54 @@ export function NewsPage() {
       <BannerSection page={page} />
       <section className="py-12 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            {NEWS.map((n, i) => {
-              const title = lang === "en" ? n.titleEn : n.titleCn;
-              const excerpt = lang === "en" ? n.excerptEn : n.excerptCn;
-              const date = lang === "en" ? n.dateEn : n.dateCn;
-              const tag = lang === "en" ? n.tagEn : n.tagCn;
-              return (
-                <article
-                  key={i}
-                  className="group rounded-xl border border-border bg-card overflow-hidden hover:border-brand transition-colors"
-                >
-                  <div className="relative aspect-[16/9] overflow-hidden bg-black/40">
-                    <img
-                      src={n.image}
-                      alt={title}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-brand text-primary-foreground text-xs font-semibold px-2.5 py-1">
-                      {tag}
-                    </span>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <CalendarDays className="size-3.5" />
-                      {date}
+          {/* Admin-edited content blocks take precedence; fall back to the
+              built-in sample news cards so a fresh install isn't empty. */}
+          {page.contentBlocks?.length ? (
+            <div className="space-y-12 md:space-y-16">
+              {page.contentBlocks.map((b) => (
+                <ContentBlock key={b.id} block={b} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+              {NEWS.map((n, i) => {
+                const title = lang === "en" ? n.titleEn : n.titleCn;
+                const excerpt = lang === "en" ? n.excerptEn : n.excerptCn;
+                const date = lang === "en" ? n.dateEn : n.dateCn;
+                const tag = lang === "en" ? n.tagEn : n.tagCn;
+                return (
+                  <article
+                    key={i}
+                    className="group rounded-xl border border-border bg-card overflow-hidden hover:border-brand transition-colors"
+                  >
+                    <div className="relative aspect-[16/9] overflow-hidden bg-black/40">
+                      <img
+                        src={n.image}
+                        alt={title}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-brand text-primary-foreground text-xs font-semibold px-2.5 py-1">
+                        {tag}
+                      </span>
                     </div>
-                    <h3 className="mt-3 text-lg font-semibold leading-snug line-clamp-2">
-                      {title}
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                      {excerpt}
-                    </p>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CalendarDays className="size-3.5" />
+                        {date}
+                      </div>
+                      <h3 className="mt-3 text-lg font-semibold leading-snug line-clamp-2">
+                        {title}
+                      </h3>
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                        {excerpt}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
 
           <div className="mt-12 text-center">
             <Button

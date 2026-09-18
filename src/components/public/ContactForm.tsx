@@ -206,6 +206,7 @@ function Field({
   error?: boolean;
   children: React.ReactNode;
 }) {
+  const lang = useI18n((s) => s.lang);
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`${id}_input`} className="text-sm">
@@ -215,7 +216,7 @@ function Field({
       {children}
       {error ? (
         <p className="text-xs text-brand">
-          {/* Reusing "required" message style; using inline copy to avoid more keys */}
+          {lang === "cn" ? "此项为必填" : "This field is required"}
         </p>
       ) : null}
     </div>

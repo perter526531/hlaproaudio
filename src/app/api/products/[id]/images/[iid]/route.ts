@@ -28,19 +28,27 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id, iid } = await ctx.params;
+  // Look up the image being deleted so we know whether it was the cover.
+  const deleting = await db.productImage.findUnique({ where: { id: iid } });
   await db.productImage.delete({ where: { id: iid } });
-  // refresh coverImage if needed
-  const remaining = await db.productImage.findMany({
-    where: { productId: id },
-    orderBy: { order: "asc" },
-  });
-  if (remaining.length) {
-    await db.product.update({
+
+  // Only re-sync the cover when the deleted image WAS the cover — otherwise
+  // preserve any custom cover URL the admin may have set independently.
+  if (deleting) {
+    const product = await db.product.findUnique({
       where: { id },
-      data: { coverImage: remaining[0].url },
+      select: { coverImage: true },
     });
-  } else {
-    await db.product.update({ where: { id }, data: { coverImage: null } });
+    if (product && product.coverImage === deleting.url) {
+      const remaining = await db.productImage.findMany({
+        where: { productId: id },
+        orderBy: { order: "asc" },
+      });
+      await db.product.update({
+        where: { id },
+        data: { coverImage: remaining[0]?.url ?? null },
+      });
+    }
   }
   return NextResponse.json({ ok: true });
 }

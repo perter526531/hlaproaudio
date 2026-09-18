@@ -270,6 +270,7 @@ export function ProductManager() {
         onOpenChange={setEditOpen}
         product={editing}
         flatCats={flatCats}
+        onCreated={(p) => setEditing(p)}
       />
     </div>
   );
@@ -464,11 +465,15 @@ function ProductEditor({
   onOpenChange,
   product,
   flatCats,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   product: Product | null;
   flatCats: FlatCat[];
+  /** Called with the freshly-created product so the editor can switch into
+   * edit mode (and reveal the image uploader) without closing the sheet. */
+  onCreated?: (p: Product) => void;
 }) {
   const lang = useI18n((s) => s.lang);
   const createMut = useCreateProduct();
@@ -490,6 +495,9 @@ function ProductEditor({
   const [coverImage, setCoverImage] = React.useState<string>("");
   const [images, setImages] = React.useState<ProductImage[]>([]);
 
+  // Reset local state when the sheet opens or the edited product changes.
+  // NOTE: we intentionally key on `product?.id` (not the whole object and not
+  // `flatCats`) so a background categories refetch never clobbers unsaved edits.
   React.useEffect(() => {
     if (open) {
       if (product) {
@@ -526,7 +534,7 @@ function ProductEditor({
         setImages([]);
       }
     }
-  }, [open, product, flatCats]);
+  }, [open, product?.id]);
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -554,14 +562,20 @@ function ProductEditor({
       if (product) {
         await updateMut.mutateAsync({ id: product.id, data: payload });
         toast.success(lang === "cn" ? "产品已更新" : "Product updated");
+        onOpenChange(false);
       } else {
-        await createMut.mutateAsync({
+        const created = await createMut.mutateAsync({
           ...payload,
           images: images.map((i) => i.url),
         });
-        toast.success(lang === "cn" ? "产品已创建" : "Product created");
+        toast.success(
+          lang === "cn"
+            ? "产品已创建，可继续上传图片"
+            : "Product created — you can now upload images"
+        );
+        // Switch into edit mode (keep sheet open) so the image manager appears.
+        onCreated?.(created);
       }
-      onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
@@ -805,18 +819,22 @@ function ImageManager({
     }
   }
 
-  async function persistOrder(newOrder: ProductImage[]) {
-    // Update order for changed items
+  async function persistOrder(original: ProductImage[], next: ProductImage[]) {
+    // Persist order only for items whose order actually changed vs the original,
+    // to avoid the previous no-op (where every item's order was rewritten to its
+    // index *before* this comparison, so nothing ever matched).
     await Promise.all(
-      newOrder.map((img, idx) =>
-        img.order !== idx
+      next.map((img, idx) => {
+        const orig = original.find((o) => o.id === img.id);
+        const origOrder = orig ? orig.order : idx;
+        return origOrder !== idx
           ? updImg.mutateAsync({
               productId,
               imageId: img.id,
               data: { order: idx },
             })
-          : Promise.resolve()
-      )
+          : Promise.resolve();
+      })
     );
   }
 
@@ -826,24 +844,19 @@ function ImageManager({
     const oldIdx = images.findIndex((i) => i.id === active.id);
     const newIdx = images.findIndex((i) => i.id === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
-    const next = arrayMove(images, oldIdx, newIdx).map((img, idx) => ({
-      ...img,
-      order: idx,
-    }));
-    onChange(next);
-    void persistOrder(next);
+    const next = arrayMove(images, oldIdx, newIdx);
+    // Local UI gets the reindexed orders; persistOrder compares against `images`.
+    onChange(next.map((img, idx) => ({ ...img, order: idx })));
+    void persistOrder(images, next);
   }
 
   async function move(img: ProductImage, dir: -1 | 1) {
     const idx = images.findIndex((i) => i.id === img.id);
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= images.length) return;
-    const next = arrayMove(images, idx, newIdx).map((im, i) => ({
-      ...im,
-      order: i,
-    }));
-    onChange(next);
-    await persistOrder(next);
+    const next = arrayMove(images, idx, newIdx);
+    onChange(next.map((im, i) => ({ ...im, order: i })));
+    await persistOrder(images, next);
   }
 
   return (

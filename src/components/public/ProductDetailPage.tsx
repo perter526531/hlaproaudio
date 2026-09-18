@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Home, Mail, Check } from "lucide-react";
-import { useI18n, tr } from "@/store/i18n";
-import { useNav } from "@/store/nav";
+import { useI18n, tr, type Lang } from "@/store/i18n";
+import { useNav, type Route } from "@/store/nav";
 import { useProduct, useProducts } from "@/components/public/hooks";
 import { ProductCard } from "@/components/public/ProductCard";
 import { parseSpecs, pick } from "@/lib/types";
@@ -31,15 +31,6 @@ export function ProductDetailPage({ id }: { id: string }) {
   const lang = useI18n((s) => s.lang);
   const go = useNav((s) => s.go);
   const { data: product, isLoading } = useProduct(id);
-
-  // Related products: same category, exclude current, max 4.
-  const { data: related } = useProducts({
-    categoryId: product?.categoryId,
-    status: "listed",
-  });
-  const relatedFiltered = (related ?? [])
-    .filter((p) => p.id !== id)
-    .slice(0, 4);
 
   if (isLoading || !product) {
     return (
@@ -56,10 +47,36 @@ export function ProductDetailPage({ id }: { id: string }) {
     );
   }
 
+  return <ProductDetail product={product} id={id} lang={lang} go={go} />;
+}
+
+function ProductDetail({
+  product,
+  id,
+  lang,
+  go,
+}: {
+  product: NonNullable<ReturnType<typeof useProduct>["data"]>;
+  id: string;
+  lang: Lang;
+  go: (route: Route) => void;
+}) {
+
   const name = pick(product.nameEn, product.nameCn, lang) ?? "";
   const shortDesc = pick(product.shortDescEn, product.shortDescCn, lang) ?? "";
   const desc = pick(product.descEn, product.descCn, lang) ?? "";
   const specs = parseSpecs(product.specs);
+
+  // Related products: same category, exclude current, max 4.
+  // Called here (after product loaded) so we never fetch the whole catalog
+  // just to compute related items.
+  const { data: related } = useProducts({
+    categoryId: product.categoryId,
+    status: "listed",
+  });
+  const relatedFiltered = (related ?? [])
+    .filter((p) => p.id !== id)
+    .slice(0, 4);
 
   const images =
     product.images.length > 0

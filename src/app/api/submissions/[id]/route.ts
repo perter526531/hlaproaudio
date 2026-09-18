@@ -26,6 +26,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
   const { id } = await ctx.params;
   const body = await req.json();
+  if (body.status !== undefined && !["new", "read", "replied"].includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
   const sub = await db.formSubmission.update({
     where: { id },
     data: {

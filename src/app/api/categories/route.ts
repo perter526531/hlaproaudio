@@ -2,12 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
+type CategoryRow = {
+  id: string;
+  parentId: string | null;
+  nameEn: string;
+  nameCn: string;
+  descEn: string | null;
+  descCn: string | null;
+  icon: string | null;
+  order: number;
+};
+
+type CatWithChildren = CategoryRow & { children: CatWithChildren[] };
+
 // Public: get full category tree (3 levels)
 export async function GET() {
   const all = await db.category.findMany({
     orderBy: { order: "asc" },
   });
-  const tree = buildTree(all, null);
+  const tree = buildTree(all as CategoryRow[], null);
   return NextResponse.json(tree);
 }
 
@@ -33,15 +46,27 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(cat);
 }
 
-type CatWithChildren = Awaited<ReturnType<typeof db.category.findMany>>[number] & {
-  children: CatWithChildren[];
-};
-
-function buildTree(
-  list: Awaited<ReturnType<typeof db.category.findMany>>,
-  parentId: string | null
-): CatWithChildren[] {
+// Recursively build a tree from a flat list, rooted at parentId.
+// A visited set guards against cycles (which would otherwise infinite-loop),
+// and a depth cap enforces the 3-level invariant.
+function buildTree(list: CategoryRow[], parentId: string | null): CatWithChildren[] {
   return list
     .filter((c) => (c.parentId ?? null) === parentId)
-    .map((c) => ({ ...c, children: buildTree(list, c.id) }));
+    .map((c) => ({ ...c, children: buildChildren(list, c.id, new Set([c.id]), 1) }));
+}
+
+function buildChildren(
+  list: CategoryRow[],
+  parentId: string,
+  visited: Set<string>,
+  depth: number
+): CatWithChildren[] {
+  if (depth > 3) return []; // cap at 3 levels
+  return list
+    .filter((c) => (c.parentId ?? null) === parentId && !visited.has(c.id))
+    .map((c) => {
+      const nextVisited = new Set(visited);
+      nextVisited.add(c.id);
+      return { ...c, children: buildChildren(list, c.id, nextVisited, depth + 1) };
+    });
 }

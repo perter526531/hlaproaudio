@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(body.images)) {
     for (let i = 0; i < body.images.length; i++) {
       await db.productImage.create({
-        data: { productId: product.id, url: body.images[i], order: i },
+        data: { productId: product.id, url: String(body.images[i]), order: i },
       });
     }
   }

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       phone: String(body.phone).slice(0, 50),
       email: body.email ? String(body.email).slice(0, 100) : null,
       requirements: String(body.requirements).slice(0, 2000),
-      sourcePage: body.sourcePage || null,
+      sourcePage: body.sourcePage ? String(body.sourcePage).slice(0, 64) : null,
     },
   });
   return NextResponse.json(sub);

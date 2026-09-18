@@ -4,6 +4,15 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { getAdminUser } from "@/lib/auth";
 
+// Strict MIME -> extension map. Anything else is rejected.
+const MIME_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+// Save uploaded image to /public/uploads and return its URL path
 export async function POST(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) {
@@ -14,11 +23,17 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
-  const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-  if (!allowed.includes(file.type)) {
-    return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+  const ext = MIME_EXT[file.type];
+  if (!ext) {
+    return NextResponse.json(
+      { error: "Unsupported file type. Allowed: PNG, JPEG, WebP, GIF." },
+      { status: 400 }
+    );
   }
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  // Hard cap on size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 413 });
+  }
   const name = `${randomUUID()}.${ext}`;
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });

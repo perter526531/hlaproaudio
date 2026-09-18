@@ -23,6 +23,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
   const { id } = await ctx.params;
   const body = await req.json();
+  if (body.status !== undefined && !["listed", "unlisted"].includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
   const product = await db.product.update({
     where: { id },
     data: {

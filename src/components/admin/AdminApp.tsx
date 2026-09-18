@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { useNav } from "@/store/nav";
+import { useI18n } from "@/store/i18n";
 import { useLogout, useMe } from "./hooks";
 import { AdminLogin } from "./AdminLogin";
 import {
@@ -20,8 +21,16 @@ export function AdminApp() {
   const me = useMe();
   const setAdminMode = useNav((s) => s.setAdminMode);
   const logout = useLogout();
+  const lang = useI18n((s) => s.lang);
 
   const [active, setActive] = React.useState<AdminSection>("dashboard");
+
+  // Keep document lang in sync with the admin's UI language.
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+    }
+  }, [lang]);
 
   function onViewSite() {
     setAdminMode(false);

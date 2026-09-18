@@ -58,6 +58,7 @@ import {
   useSubmissions,
   useUpdateSubmission,
 } from "./hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import type { FormSubmission } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -280,7 +281,16 @@ function SubmissionDetail({
   const detail = useSubmission(id);
   const update = useUpdateSubmission();
   const delMut = useDeleteSubmission();
+  const qc = useQueryClient();
   const [delOpen, setDelOpen] = React.useState(false);
+
+  // GET /:id auto-marks new→read server-side; once the detail arrives,
+  // invalidate the list caches so the table badges / dashboard count refresh.
+  React.useEffect(() => {
+    if (detail.data?.id) {
+      qc.invalidateQueries({ queryKey: ["submissions"] });
+    }
+  }, [detail.data?.id, qc]);
 
   async function changeStatus(v: "new" | "read" | "replied") {
     if (!id) return;
