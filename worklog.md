@@ -296,3 +296,79 @@ Stage Summary:
 - 2 CRITICAL + 5 HIGH + 7 MEDIUM + 4 LOW bugs fixed across auth, upload, products, categories, submissions, and frontend cache/UX.
 - All fixes verified via curl (auth/cycle/upload/reorder APIs) + Agent Browser (home + admin dashboard + products manager render).
 - Lint clean, dev server healthy.
+
+---
+Task ID: 8
+Agent: full-stack-developer (second-pass fixes)
+Task: Fix review findings (error states, add/delete page, submission status, dashboard recent, N+1, a11y, image onError)
+
+Work Log:
+- Read worklog.md, public hooks.ts, admin hooks.ts, types.ts, i18n.ts, nav.ts, and all 13 in-boundary files to align with existing contracts and TanStack Query hook signatures before any change.
+- Fix #1 (public error / not-found states): For HomePage, AboutPage, NewsPage, SolutionsPage, ProductDetailPage destructured `isError` + `refetch` from `usePage`/`useProduct`. Restructured each `if (isLoading || !data)` into three branches — loading skeleton | centered "Load failed / 加载失败" Card with Retry button calling `refetch()` | centered "Page not found / 页面不存在" (ProductDetailPage: "Product not found / 产品不存在") Card with "Go Home / 返回首页" button via `useNav().go({name:"home"})`. ProductDetailPage: outer page owns the branches; the inner `ProductDetail` sub-component still receives a non-null product. Added imports for `Card`/`CardContent`/`CardHeader`/`CardTitle`/`CardDescription`, `Home`, `RotateCw` from lucide. All new text bilingual via inline `lang === "cn" ? "中" : "En"` ternaries.
+- Fix #2 (Add/Delete page in PageManager): Imported `useCreatePage` + `useDeletePage` from `./hooks`. Added `AddPageDialog` component triggered by an "Add Page / 新增页面" button placed next to the left-list CardTitle. Dialog collects slug + EN title + CN title, validates slug with `/^[a-z0-9]+(-[a-z0-9]+)*$/` and at least one title non-empty, shows inline error hints after the form is touched. On save calls `useCreatePage` with `{slug, titleEn, titleCn}`; toast on success; auto-selects the new page in the list (via `onCreated(id)`). Added `DeletePageButton` (Trash icon) absolute-positioned per row, hidden until `group-hover`, opens an AlertDialog confirm with the bilingual "Deleting this page orphans its route; the public nav still links to the slug. Continue?" warning. On confirm calls `useDeletePage(id)`; clears `selectedId` if the deleted row was the active selection. Used existing `Dialog`/`AlertDialog`/`Button`/`Input`/`Label` shadcn primitives.
+- Fix #3 (stale submission status): In `src/app/api/submissions/[id]/route.ts` GET, when `sub.status === "new"` the previous code ran an `update` but still returned the original `sub` (still status=new) — the detail dialog badge was out-of-sync with the list. Changed to capture the result of `db.formSubmission.update(...)` and `NextResponse.json(updated)` instead. Kept the admin guard and the 404-not-found branch.
+- Fix #4 (Dashboard recent inquiries): Added a second query `const recentSubs = useSubmissions("")` for the "Recent Inquiries" table; `subs` (`useSubmissions("new")`) now powers only the "New Inquiries" stat card count. `recent` memo sorts `recentSubs.data` by `createdAt` desc and slices 5. The recent-table loading branch now checks `recentSubs.isLoading`. The stat-card aggregate `loading` still includes `subs.isLoading`.
+- Fix #5 (N+1 in collectDescendants): Rewrote `collectDescendants(rootId)` in `src/app/api/products/route.ts` to issue a single `db.category.findMany({ select: { id: true, parentId: true } })`, build a `parentId → childIds[]` map in memory, then DFS over the map with a visited `Set<string>` starting at `rootId`. Same return shape `Promise<string[]>` containing rootId + all descendants. Verified via `GET /api/products?categoryId=<L1 Loudspeakers>` returning 4 descendant-attached products with a single `Category.findMany` query in dev.log.
+- Fix #6 (keyboard a11y): Dashboard stat `<Card>` now carries `role="button"`, `tabIndex={0}`, `aria-label={tr(s.key, lang)}`, and an `onKeyDown` that triggers `onNavigate(s.section)` on Enter/Space (with `preventDefault` for Space so it doesn't scroll). SubmissionViewer desktop `<TableRow>` (removed the unused `idx` param too) and mobile `<motion.div>` wrappers each got the same role/tabIndex/onKeyDown pattern + a `focus-visible:ring-brand/40` outline so keyboard users can see the focus. Cursor-pointer retained.
+- Fix #7 (image onError): Added `onError={(e) => { e.currentTarget.style.opacity = "0"; }}` to every `<img>` in BannerSection.tsx (1 img), ProductCard.tsx (1 img), ContentBlock.tsx (3 imgs: HeroBlock, TextBlock, ImageBlock), and NewsPage.tsx (1 img in the static news cards). One consistent approach (opacity:0) used everywhere; broken-image icon suppressed on 404'd OSS URLs. Did not touch AboutPage/SolutionsPage/ProductDetailPage imgs (out of spec).
+- Ran `bun run lint` after every batch of edits → 0 errors / 0 warnings.
+- Smoke-tested the live dev server (port 3000) end-to-end with `curl`:
+  - `POST /api/auth/login` admin/admin123 → 200 + user cookie.
+  - `POST /api/pages` {slug:"test-second-pass",titleEn,titleCn} → 200, page listed in `GET /api/pages`.
+  - `DELETE /api/pages/<id>` → 200, page removed from list.
+  - `POST /api/submissions` (public) → 200 with status="new".
+  - `GET /api/submissions/<id>` (admin) → 200 with status="read" (was returning "new" before fix #3). Dev log shows the SQL `UPDATE ... RETURNING status='read'`.
+  - `GET /api/products?categoryId=<L1 Loudspeakers>` → 200, 4 products across descendants with one `Category.findMany` (no per-node N+1). Dev log confirms.
+  - `GET /` → 200.
+  - `DELETE /api/submissions/<id>` → 200 cleanup.
+- Dev log shows `✓ Compiled` cleanly after each save, no runtime errors.
+
+Stage Summary:
+- Files changed (strictly within the boundary list — no other files touched):
+  - `src/components/public/HomePage.tsx` — added error/not-found branches + Card imports + Home/RotateCw icons.
+  - `src/components/public/AboutPage.tsx` — same pattern.
+  - `src/components/public/NewsPage.tsx` — same pattern + bilingual "Loading…" string.
+  - `src/components/public/SolutionsPage.tsx` — same pattern.
+  - `src/components/public/ProductDetailPage.tsx` — outer ProductDetailPage restructured: loading skeleton | "Load failed" retry Card | "Product not found" go-home Card | ProductDetail sub-component. Added Card/RotateCw imports.
+  - `src/components/public/BannerSection.tsx` — `onError` opacity:0 on the banner `<img>`.
+  - `src/components/public/ProductCard.tsx` — `onError` opacity:0 on the cover `<img>`.
+  - `src/components/public/ContentBlock.tsx` — `onError` opacity:0 on the 3 image-bearing blocks (Hero/Text-with-image/Image).
+  - `src/components/admin/PageManager.tsx` — imported `useCreatePage`/`useDeletePage`; added `AddPageDialog` (slug + bilingual title + validation) and `DeletePageButton` (per-row trash + AlertDialog confirm with route-orphan warning); header restructured to `flex-row justify-between` so the Add button sits next to the title; list rows got `group relative` + right-aligned trash that stops click propagation.
+  - `src/components/admin/Dashboard.tsx` — second `useSubmissions("")` query for the recent table; `recent` memo sorts by createdAt desc and slices 5; recent-table loading checks `recentSubs.isLoading`; stat-card `<Card>` got `role="button"`/`tabIndex={0}`/`aria-label`/`onKeyDown` (Enter + Space).
+  - `src/components/admin/SubmissionViewer.tsx` — desktop `<TableRow>` and mobile `<motion.div>` got `role="button"`/`tabIndex={0}`/`onKeyDown` (Enter + Space) + `focus-visible:ring-brand/40` outline; removed unused `idx` in the desktop map.
+  - `src/app/api/submissions/[id]/route.ts` — GET now returns the post-update record (`status:"read"`) instead of the stale pre-update record when the viewed submission was new.
+  - `src/app/api/products/route.ts` — `collectDescendants` rewritten as a single-fetch + in-memory DFS with a visited set (eliminates N+1 across 3-level category tree).
+- Key decisions:
+  - For ProductDetailPage, the not-found/error branches live in the OUTER component (before delegating to `ProductDetail`), keeping the inner sub-component focused on rendering a guaranteed-present product. This matches the existing refactor in worklog Task 7.
+  - For public-page error states, used `Card` from shadcn (already exported `CardDescription`/`CardHeader`/`CardTitle`/`CardContent`) instead of building a new primitive — consistent with the "use existing shadcn/ui" rule.
+  - Retry button calls the underlying TanStack Query `refetch()` exposed by `usePage` (which spreads `...q` from `usePages()`) and `useProduct(id)`.
+  - PageManager Add dialog: validation requires slug non-empty + matches `/^[a-z0-9]+(-[a-z0-9]+)*$/` AND at least one of EN/CN title non-empty. Title falls back to the other language if only one is supplied (so DB non-null is preserved even if the admin only fills one side).
+  - PageManager Delete button: positioned absolutely inside a `group relative` `<li>`, appears on hover, and calls `e.stopPropagation()` so clicking the trash doesn't also select the page row.
+  - collectDescendants: BFS/DFS with a visited `Set` is robust even if a future schema change ever allows category cycles (visited-set prevents infinite loop). Return order doesn't matter — it's only fed into `where.categoryId = { in: ids }`.
+  - Image onError: chose `opacity:0` per the spec's "simplest" suggestion — it keeps the element's layout box intact (no reflow) while hiding the broken-image icon. Applied uniformly across BannerSection/ProductCard/ContentBlock/NewsPage as required.
+  - Did NOT touch AboutPage/SolutionsPage/ProductDetailPage `<img>` tags for fix #7 (spec lists only BannerSection/ProductCard/ContentBlock/NewsPage).
+- Known issues / notes:
+  - The dev server still emits an unrelated "Failed to find Server Action" error from an earlier `POST /api/upload` 404 — that belongs to other agents' work (the multipart-upload endpoint path) and is outside my file boundary.
+  - The "Add Page" dialog auto-selects the new page via `onCreated(created.id)` after invalidation; the `usePagesAdmin()` cache refetches and the existing `React.useEffect([pages, selectedId])` in PageManager falls back to the first page if `selectedId` is null. Passing the new id explicitly short-circuits that.
+
+---
+Task ID: 9
+Agent: main (second-pass: title/logo wiring + review fixes)
+Task: Answer user question (title/logo backend connection) by implementing it; fix second-pass review findings; restore lost upload route
+
+Work Log:
+- ANSWERED USER QUESTION: website <title>, favicon, and logo were all hardcoded (NOT connected to backend). The SiteSetting.logo field existed but no component read it (dead field).
+- Restored CRITICAL lost file: src/app/api/upload/route.ts had been deleted by an auto-commit (76faaea) after the first push — admin image uploads were 404ing. Restored from commit e35bd90. Verified POST /api/upload → 401 (auth required, not 404).
+- TITLE/LOGO/SITE-NAME WIRING (the user's question):
+  - Added siteNameEn + siteNameCn fields to SiteSetting (schema + lib/types + admin/types + settings API PUT + seed).
+  - Created src/components/brand.tsx — a shared Brand component: renders settings.logo as an <img> when set, else the Volume2 icon + wordmark (site name from settings, defaulting to the split "AUDIO|CENTER"). Used by Header, Footer, AdminLogin, AdminLayout, and the mobile Sheet drawer.
+  - PublicSite: added a useEffect that sets document.title = "{pageTitle} | {siteName}" (bilingual, from usePages + useSettings, mapped via routeToSlug) and sets the favicon <link> href from settings.logo. Same effect in AdminApp (admin title = "{Admin CMS} | {siteName}").
+  - Replaced all hardcoded branding in Header (desktop + mobile Sheet), Footer, AdminLogin, AdminLayout with <Brand />.
+  - SettingsEditor: added a "品牌信息 / Brand" card with siteNameEn/Cn inputs + the logo uploader (logo now also documented as the favicon source). Fixed empty-state: render the (empty) form when !data so Save works even if the settings row is missing (PUT auto-creates it).
+- SECOND-PASS REVIEW FIXES (delegated to full-stack agent, Task 8 in worklog): error/not-found states in 5 public pages; Add/Delete page in PageManager (useCreatePage/useDeletePage were unused); submission detail returns updated (read) record; Dashboard recent inquiries uses unfiltered list; N+1 in collectDescendants fixed (single query + in-memory DFS); keyboard a11y on Dashboard cards + SubmissionViewer rows; image onError fallback in 4 public components.
+- Reduced Prisma log verbosity: log:['query'] → log:['warn','error'] (the per-query log was drowning real errors in dev.log).
+
+Stage Summary:
+- User's question fully resolved: title, favicon, and logo are now ALL admin-editable via Settings → "品牌信息" card (site name En/Cn + logo image). The browser tab title, the favicon, and every brand mark on the site read from SiteSetting and update live on save.
+- Also fixed: lost upload route (CRITICAL), 5 public-page error states, Add/Delete page, submission status freshness, dashboard recent inquiries, N+1 query, keyboard a11y, image onError, settings empty-state, db log noise.
+- Verified: lint 0/0; PUT /api/settings (siteNameCn=测试品牌) → 200 + persisted; GET confirms; browser document.title = "首页 | AudioCenter 专业音响" (dynamic); Brand aria-label reads site name from settings.

@@ -50,7 +50,9 @@ import {
 import { useI18n, tr } from "@/store/i18n";
 import {
   useCreateBlock,
+  useCreatePage,
   useDeleteBlock,
+  useDeletePage,
   usePagesAdmin,
   useUpdateBlock,
   useUpdatePage,
@@ -98,11 +100,16 @@ export function PageManager() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
       {/* Left: pages list */}
       <Card className="border-border/60">
-        <CardHeader className="pb-3">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <FileText className="size-4 text-brand" />
             {lang === "cn" ? "页面列表" : "Pages"}
           </CardTitle>
+          <AddPageDialog
+            onCreated={(id) => {
+              if (id) setSelectedId(id);
+            }}
+          />
         </CardHeader>
         <CardContent className="p-2">
           {!pages || pages.length === 0 ? (
@@ -114,11 +121,11 @@ export function PageManager() {
               {pages.map((p) => {
                 const isActive = p.id === selectedId;
                 return (
-                  <li key={p.id}>
+                  <li key={p.id} className="group relative">
                     <button
                       onClick={() => setSelectedId(p.id)}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                        "flex w-full items-center gap-2 rounded-md px-3 py-2 pr-9 text-left text-sm transition-colors",
                         isActive
                           ? "bg-brand text-primary-foreground"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -142,6 +149,12 @@ export function PageManager() {
                         {p.slug}
                       </span>
                     </button>
+                    <DeletePageButton
+                      page={p}
+                      onDeleted={() => {
+                        if (selectedId === p.id) setSelectedId(null);
+                      }}
+                    />
                   </li>
                 );
               })}
@@ -717,5 +730,203 @@ function BlockDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ----------------------- Add Page dialog ----------------------- */
+
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+function AddPageDialog({ onCreated }: { onCreated: (id?: string) => void }) {
+  const lang = useI18n((s) => s.lang);
+  const createPage = useCreatePage();
+  const [open, setOpen] = React.useState(false);
+  const [form, setForm] = React.useState({ slug: "", titleEn: "", titleCn: "" });
+  const [touched, setTouched] = React.useState(false);
+
+  React.useEffect(() => {
+    if (open) {
+      setForm({ slug: "", titleEn: "", titleCn: "" });
+      setTouched(false);
+    }
+  }, [open]);
+
+  const slugValid = SLUG_RE.test(form.slug.trim());
+  const titleValid = form.titleEn.trim().length > 0 || form.titleCn.trim().length > 0;
+  const canSave = slugValid && titleValid && !createPage.isPending;
+
+  async function onSave() {
+    setTouched(true);
+    if (!canSave) return;
+    try {
+      const created = await createPage.mutateAsync({
+        slug: form.slug.trim(),
+        titleEn: form.titleEn.trim() || form.titleCn.trim(),
+        titleCn: form.titleCn.trim() || form.titleEn.trim(),
+      });
+      toast.success(lang === "cn" ? "已新增页面" : "Page added");
+      setOpen(false);
+      onCreated(created?.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Plus className="size-4" />
+          {lang === "cn" ? "新增页面" : "Add Page"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {lang === "cn" ? "新增页面" : "Add Page"}
+          </DialogTitle>
+          <DialogDescription>
+            {lang === "cn"
+              ? "新建一个站点页面，可随后编辑横幅与内容区块。"
+              : "Create a new site page. You can edit its banner and content blocks afterwards."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <Field
+            label={lang === "cn" ? "路径 Slug" : "Slug"}
+            hint={
+              lang === "cn"
+                ? "只能包含小写字母、数字与连字符，例如 about-us"
+                : "Lowercase letters, digits and hyphens only — e.g. about-us"
+            }
+          >
+            <Input
+              value={form.slug}
+              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+              placeholder="about-us"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSave();
+                }
+              }}
+            />
+            {touched && !slugValid && (
+              <p className="text-[11px] text-destructive">
+                {lang === "cn"
+                  ? "Slug 必须为小写字母/数字并以连字符分隔"
+                  : "Slug must be lowercase letters/digits separated by hyphens"}
+              </p>
+            )}
+          </Field>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label={`${lang === "cn" ? "标题" : "Title"} (EN)`}>
+              <Input
+                value={form.titleEn}
+                onChange={(e) => setForm((f) => ({ ...f, titleEn: e.target.value }))}
+                placeholder="About Us"
+              />
+            </Field>
+            <Field label={`${lang === "cn" ? "标题" : "Title"} (中文)`}>
+              <Input
+                value={form.titleCn}
+                onChange={(e) => setForm((f) => ({ ...f, titleCn: e.target.value }))}
+                placeholder="关于我们"
+              />
+            </Field>
+          </div>
+          {touched && !titleValid && (
+            <p className="text-[11px] text-destructive">
+              {lang === "cn"
+                ? "至少填写一种语言的标题"
+                : "At least one language title is required"}
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            {tr("cancel", lang)}
+          </Button>
+          <Button onClick={onSave} disabled={!canSave}>
+            {createPage.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {tr("save", lang)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ----------------------- Delete Page button ----------------------- */
+
+function DeletePageButton({
+  page,
+  onDeleted,
+}: {
+  page: SitePage;
+  onDeleted: () => void;
+}) {
+  const lang = useI18n((s) => s.lang);
+  const deletePage = useDeletePage();
+  const [open, setOpen] = React.useState(false);
+
+  async function onDel() {
+    try {
+      await deletePage.mutateAsync(page.id);
+      toast.success(lang === "cn" ? "已删除页面" : "Page deleted");
+      setOpen(false);
+      onDeleted();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute right-1 top-1/2 -translate-y-1/2 size-7 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+        title={tr("delete", lang)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        <Trash2 className="size-3.5" />
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("confirm_delete", lang)}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {lang === "cn"
+                ? "删除该页面会使其路由失效；前台导航仍会指向该 slug。是否继续？"
+                : "Deleting this page orphans its route; the public nav still links to the slug. Continue?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tr("cancel", lang)}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDel}
+              className="bg-destructive text-white hover:bg-destructive/90"
+              disabled={deletePage.isPending}
+            >
+              {deletePage.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {tr("delete", lang)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

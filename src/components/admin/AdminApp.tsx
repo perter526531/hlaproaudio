@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import { useNav } from "@/store/nav";
 import { useI18n } from "@/store/i18n";
 import { useLogout, useMe } from "./hooks";
+import { useSettingsAdmin } from "./hooks";
+import { pick } from "@/lib/types";
 import { AdminLogin } from "./AdminLogin";
 import {
   AdminLayout,
@@ -22,6 +24,7 @@ export function AdminApp() {
   const setAdminMode = useNav((s) => s.setAdminMode);
   const logout = useLogout();
   const lang = useI18n((s) => s.lang);
+  const { data: settings } = useSettingsAdmin();
 
   const [active, setActive] = React.useState<AdminSection>("dashboard");
 
@@ -31,6 +34,23 @@ export function AdminApp() {
       document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
     }
   }, [lang]);
+
+  // Dynamic browser tab title in admin mode: "{Admin CMS} | {siteName}".
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const siteName =
+      pick(settings?.siteNameEn, settings?.siteNameCn, lang) ?? "AudioCenter";
+    const adminLabel = lang === "cn" ? "管理后台" : "Admin CMS";
+    document.title = `${adminLabel} | ${siteName}`;
+    const href = settings?.logo || "/logo.svg";
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = href;
+  }, [lang, settings]);
 
   function onViewSite() {
     setAdminMode(false);

@@ -7,12 +7,12 @@ import {
   Mail,
   MapPin,
   Phone,
-  Volume2,
   Youtube,
 } from "lucide-react";
 import { useI18n, tr, type TKey } from "@/store/i18n";
 import { useNav, type Route } from "@/store/nav";
 import { useSettings } from "@/components/public/hooks";
+import { Brand } from "@/components/brand";
 import { pick, type SiteSetting } from "@/lib/types";
 
 interface Link {
@@ -48,17 +48,7 @@ export function Footer() {
         <div className="grid gap-8 md:gap-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <button
-              onClick={() => go({ name: "home" })}
-              className="flex items-center gap-2 mb-3"
-            >
-              <span className="inline-flex items-center justify-center size-9 rounded-md brand-gradient text-primary-foreground">
-                <Volume2 className="size-5" />
-              </span>
-              <span className="font-bold tracking-widest text-base">
-                AUDIO<span className="text-brand">CENTER</span>
-              </span>
-            </button>
+            <Brand size="md" onClick={() => go({ name: "home" })} className="mb-3" />
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               {tr("footer_about_desc", lang)}
             </p>

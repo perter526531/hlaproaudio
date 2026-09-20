@@ -76,17 +76,34 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(full);
 }
 
-// Recursively collect a category id and all descendant ids (3 levels deep)
+// Recursively collect a category id and all descendant ids.
+// Refactored to fetch ALL categories once and traverse in-memory (BFS),
+// eliminating the previous N+1 (one db.category.findMany per node).
 async function collectDescendants(rootId: string): Promise<string[]> {
-  const out = [rootId];
+  const all = await db.category.findMany({
+    select: { id: true, parentId: true },
+  });
+  // Build a map of parentId -> child ids for O(1) lookups.
+  const childrenOf = new Map<string | null, string[]>();
+  for (const c of all) {
+    const key = c.parentId;
+    const arr = childrenOf.get(key) ?? [];
+    arr.push(c.id);
+    childrenOf.set(key, arr);
+  }
+
+  const out = new Set<string>([rootId]);
   const stack = [rootId];
   while (stack.length) {
     const cur = stack.pop()!;
-    const children = await db.category.findMany({ where: { parentId: cur }, select: { id: true } });
-    for (const c of children) {
-      out.push(c.id);
-      stack.push(c.id);
+    const kids = childrenOf.get(cur);
+    if (!kids) continue;
+    for (const k of kids) {
+      if (!out.has(k)) {
+        out.add(k);
+        stack.push(k);
+      }
     }
   }
-  return out;
+  return Array.from(out);
 }

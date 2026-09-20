@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarDays, ArrowRight } from "lucide-react";
+import { CalendarDays, ArrowRight, Home, RotateCw } from "lucide-react";
 import { useI18n, tr } from "@/store/i18n";
 import { useNav } from "@/store/nav";
 import { usePage } from "@/components/public/hooks";
 import { BannerSection } from "@/components/public/BannerSection";
 import { ContentBlock } from "@/components/public/ContentBlock";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface NewsItem {
   titleEn: string;
@@ -68,12 +69,64 @@ const NEWS: NewsItem[] = [
 export function NewsPage() {
   const lang = useI18n((s) => s.lang);
   const go = useNav((s) => s.go);
-  const { data: page, isLoading } = usePage("news");
+  const { data: page, isLoading, isError, refetch } = usePage("news");
 
-  if (isLoading || !page) {
+  if (isLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground">
+          {lang === "cn" ? "加载中…" : "Loading…"}
+        </p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "加载失败" : "Load failed"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "无法加载新闻页内容，请稍后重试。"
+                : "Couldn't load the news page content. Please try again."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RotateCw className="size-4" />
+              {lang === "cn" ? "重试" : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!page) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "页面不存在" : "Page not found"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "您访问的页面不存在或已被移除。"
+                : "The page you are looking for does not exist."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="brand-gradient text-primary-foreground" onClick={() => go({ name: "home" })}>
+              <Home className="size-4" />
+              {lang === "cn" ? "返回首页" : "Go Home"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -109,6 +162,9 @@ export function NewsPage() {
                         alt={title}
                         loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.opacity = "0";
+                        }}
                       />
                       <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-brand text-primary-foreground text-xs font-semibold px-2.5 py-1">
                         {tag}

@@ -198,11 +198,19 @@ export function SubmissionViewer() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {list.data.map((s, idx) => (
+                  {list.data.map((s) => (
                     <TableRow
                       key={s.id}
                       onClick={() => setDetailId(s.id)}
-                      className="cursor-pointer"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDetailId(s.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -238,8 +246,16 @@ export function SubmissionViewer() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03, duration: 0.2 }}
                 onClick={() => setDetailId(s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDetailId(s.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
-                <Card className="cursor-pointer border-border/60 transition-colors hover:border-brand/40">
+                <Card className="cursor-pointer border-border/60 transition-colors hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40">
                   <CardContent className="space-y-2 p-3">
                     <div className="flex items-center justify-between">
                       <span className="truncate text-sm font-medium">

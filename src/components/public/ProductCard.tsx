@@ -43,6 +43,9 @@ export function ProductCard({ product }: { product: Product }) {
             alt={name}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={(e) => {
+              e.currentTarget.style.opacity = "0";
+            }}
           />
         ) : (
           <div className="h-full w-full brand-gradient" />

@@ -70,6 +70,9 @@ function HeroBlock({
           alt={title ?? "hero"}
           className="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.opacity = "0";
+          }}
         />
       ) : null}
       <div className="absolute inset-0 hero-overlay" />
@@ -129,6 +132,9 @@ function TextBlock({
               alt={title ?? "section"}
               className="h-full w-full object-cover"
               loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.opacity = "0";
+              }}
             />
           </div>
         </div>
@@ -171,6 +177,9 @@ function ImageBlock({
             alt={title ?? "image"}
             className="w-full h-auto object-cover max-h-[70vh]"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.opacity = "0";
+            }}
           />
         ) : null}
         {content ? (

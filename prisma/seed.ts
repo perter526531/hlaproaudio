@@ -44,6 +44,9 @@ async function main() {
   // Site settings
   await db.siteSetting.create({
     data: {
+      siteNameEn: "AudioCenter",
+      siteNameCn: "AudioCenter 专业音响",
+      logo: null,
       phoneEn: "+86 400-888-0000",
       phoneCn: "400-888-0000",
       emailEn: "info@audiocenter.example",

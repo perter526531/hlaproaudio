@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useI18n, tr, type TKey } from "@/store/i18n";
+import { Brand } from "@/components/brand";
 import type { AdminUser } from "./types";
 
 export type AdminSection =
@@ -101,15 +102,13 @@ export function AdminLayout({
 
   const brandHeader = (
     <div className="flex h-16 items-center gap-2 border-b border-border/60 px-5">
-      <div className="flex size-8 items-center justify-center rounded-md bg-brand text-primary-foreground shadow-md shadow-brand/30">
-        <span className="text-sm font-bold">A</span>
-      </div>
+      <Brand size="sm" showText={false} />
       <div className="flex flex-col leading-none">
         <span className="text-sm font-semibold tracking-tight">
-          AUDIO<span className="text-brand">CENTER</span>
+          {lang === "cn" ? "管理后台" : "Admin CMS"}
         </span>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {lang === "cn" ? "管理后台" : "Admin CMS"}
+          {lang === "cn" ? "内容管理系统" : "Content CMS"}
         </span>
       </div>
     </div>

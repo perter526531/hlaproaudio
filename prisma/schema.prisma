@@ -125,6 +125,11 @@ model FormSubmission {
 /// Site-wide settings (contact info, logo, etc.) - single row
 model SiteSetting {
   id            String   @id @default(cuid())
+  /// Brand/site name shown in the header, footer, admin chrome and the
+  /// browser tab title (bilingual).
+  siteNameEn    String?
+  siteNameCn    String?
+  /// Brand logo image URL. When set, overrides the default icon+wordmark.
   logo          String?
   phoneEn       String?
   phoneCn       String?

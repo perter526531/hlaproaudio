@@ -26,6 +26,9 @@ export function BannerSection({ page }: { page: SitePage }) {
           alt={title ?? "banner"}
           className="absolute inset-0 h-full w-full object-cover"
           loading="eager"
+          onError={(e) => {
+            e.currentTarget.style.opacity = "0";
+          }}
         />
       ) : (
         <div className="absolute inset-0 brand-gradient" />

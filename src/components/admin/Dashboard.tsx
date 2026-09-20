@@ -52,7 +52,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const pages = usePagesAdmin();
   const cats = useCategoriesAdmin();
   const products = useProductsAdmin({ status: "", categoryId: "", q: "" });
+  // `subs` (filtered to status=new) powers ONLY the "New Inquiries" stat card.
+  // `recentSubs` (unfiltered) powers the "Recent Inquiries" table so the table
+  // still shows rows when there are zero new but many read/replied inquiries.
   const subs = useSubmissions("new");
+  const recentSubs = useSubmissions("");
 
   const loading = pages.isLoading || cats.isLoading || products.isLoading || subs.isLoading;
 
@@ -99,9 +103,17 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   ];
 
   const recent = React.useMemo(() => {
-    if (!subs.data) return [];
-    return subs.data.slice(0, 5);
-  }, [subs.data]);
+    if (!recentSubs.data) return [];
+    // Defensive sort by createdAt desc (latest 5) — the API may already be
+    // sorted, but we ensure a stable latest-first order regardless.
+    return [...recentSubs.data]
+      .sort((a, b) => {
+        const ta = new Date(a.createdAt).getTime();
+        const tb = new Date(b.createdAt).getTime();
+        return tb - ta;
+      })
+      .slice(0, 5);
+  }, [recentSubs.data]);
 
   return (
     <div className="space-y-6">
@@ -133,7 +145,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 >
                   <Card
                     className="relative cursor-pointer overflow-hidden border-border/60 transition-all hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onNavigate(s.section)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onNavigate(s.section);
+                      }
+                    }}
+                    aria-label={tr(s.key, lang)}
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between">
@@ -176,7 +197,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </Button>
           </div>
 
-          {subs.isLoading ? (
+          {recentSubs.isLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
             </div>

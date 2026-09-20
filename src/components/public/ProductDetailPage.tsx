@@ -19,7 +19,8 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Home, Mail, Check } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Home, Mail, Check, RotateCw } from "lucide-react";
 import { useI18n, tr, type Lang } from "@/store/i18n";
 import { useNav, type Route } from "@/store/nav";
 import { useProduct, useProducts } from "@/components/public/hooks";
@@ -30,9 +31,9 @@ import { cn } from "@/lib/utils";
 export function ProductDetailPage({ id }: { id: string }) {
   const lang = useI18n((s) => s.lang);
   const go = useNav((s) => s.go);
-  const { data: product, isLoading } = useProduct(id);
+  const { data: product, isLoading, isError, refetch } = useProduct(id);
 
-  if (isLoading || !product) {
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid md:grid-cols-2 gap-10">
@@ -43,6 +44,56 @@ export function ProductDetailPage({ id }: { id: string }) {
             <Skeleton className="h-40 w-full" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "加载失败" : "Load failed"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "无法加载该产品，请稍后重试。"
+                : "Couldn't load this product. Please try again."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RotateCw className="size-4" />
+              {lang === "cn" ? "重试" : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "产品不存在" : "Product not found"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "您查看的产品不存在或已被下架。"
+                : "The product you are looking for does not exist."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="brand-gradient text-primary-foreground" onClick={() => go({ name: "home" })}>
+              <Home className="size-4" />
+              {lang === "cn" ? "返回首页" : "Go Home"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

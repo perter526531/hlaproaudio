@@ -23,6 +23,8 @@ export async function PUT(req: NextRequest) {
   const updated = await db.siteSetting.update({
     where: { id: setting.id },
     data: {
+      ...(body.siteNameEn !== undefined && { siteNameEn: body.siteNameEn }),
+      ...(body.siteNameCn !== undefined && { siteNameCn: body.siteNameCn }),
       ...(body.logo !== undefined && { logo: body.logo }),
       ...(body.phoneEn !== undefined && { phoneEn: body.phoneEn }),
       ...(body.phoneCn !== undefined && { phoneCn: body.phoneCn }),

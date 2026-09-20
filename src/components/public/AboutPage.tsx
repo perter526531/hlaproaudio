@@ -6,16 +6,17 @@ import { BannerSection } from "@/components/public/BannerSection";
 import { ContentBlock } from "@/components/public/ContentBlock";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNav } from "@/store/nav";
-import { Mail } from "lucide-react";
+import { Home, Mail, RotateCw } from "lucide-react";
 import { pick } from "@/lib/types";
 
 export function AboutPage() {
   const lang = useI18n((s) => s.lang);
   const go = useNav((s) => s.go);
-  const { data: page, isLoading } = usePage("about");
+  const { data: page, isLoading, isError, refetch } = usePage("about");
 
-  if (isLoading || !page) {
+  if (isLoading) {
     return (
       <div>
         <Skeleton className="h-[55vh] w-full rounded-none" />
@@ -23,6 +24,56 @@ export function AboutPage() {
           <Skeleton className="h-10 w-1/3" />
           <Skeleton className="h-40 w-full" />
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "加载失败" : "Load failed"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "无法加载关于页内容，请稍后重试。"
+                : "Couldn't load the about page content. Please try again."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RotateCw className="size-4" />
+              {lang === "cn" ? "重试" : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!page) {
+    return (
+      <div className="flex items-center justify-center py-24 px-4">
+        <Card className="max-w-md w-full text-center border-border/60">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {lang === "cn" ? "页面不存在" : "Page not found"}
+            </CardTitle>
+            <CardDescription>
+              {lang === "cn"
+                ? "您访问的页面不存在或已被移除。"
+                : "The page you are looking for does not exist."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="brand-gradient text-primary-foreground" onClick={() => go({ name: "home" })}>
+              <Home className="size-4" />
+              {lang === "cn" ? "返回首页" : "Go Home"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

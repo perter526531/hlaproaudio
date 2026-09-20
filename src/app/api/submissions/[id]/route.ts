@@ -11,9 +11,14 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const { id } = await ctx.params;
   const sub = await db.formSubmission.findUnique({ where: { id } });
   if (!sub) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  // mark read on view
+  // mark read on view; return the UPDATED record so the detail badge matches
+  // the list (otherwise the dialog would show "new" while the list shows "read").
   if (sub.status === "new") {
-    await db.formSubmission.update({ where: { id }, data: { status: "read" } });
+    const updated = await db.formSubmission.update({
+      where: { id },
+      data: { status: "read" },
+    });
+    return NextResponse.json(updated);
   }
   return NextResponse.json(sub);
 }

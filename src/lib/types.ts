@@ -111,6 +111,8 @@ export interface FormSubmission {
 
 export interface SiteSetting {
   id: string;
+  siteNameEn: string | null;
+  siteNameCn: string | null;
   logo: string | null;
   phoneEn: string | null;
   phoneCn: string | null;

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n, tr } from "@/store/i18n";
 import { useLogin } from "./hooks";
+import { Brand } from "@/components/brand";
 
 export interface AdminLoginProps {
   /** Called when login succeeds so parent can refetch /api/auth/me. */
@@ -61,12 +62,7 @@ export function AdminLogin({ onSuccess }: AdminLoginProps) {
         <Card className="border border-border/60 bg-card/80 backdrop-blur-md">
           <CardContent className="p-8">
             <div className="mb-6 flex flex-col items-center text-center">
-              <div className="mb-3 flex size-12 items-center justify-center rounded-md bg-brand text-primary-foreground shadow-lg shadow-brand/30">
-                <span className="text-lg font-bold">A</span>
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                AUDIO<span className="text-brand">CENTER</span>
-              </h1>
+              <Brand size="lg" className="mb-3" />
               <p className="mt-1 text-sm text-muted-foreground">
                 {tr("admin_login", lang)}
               </p>

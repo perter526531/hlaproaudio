@@ -33,6 +33,8 @@ const SOCIAL_FIELDS: { key: keyof SiteSetting; en: string; cn: string }[] = [
 ];
 
 const SETTING_KEYS = [
+  "siteNameEn",
+  "siteNameCn",
   "logo",
   "phoneEn",
   "phoneCn",
@@ -77,6 +79,8 @@ export function SettingsEditor() {
     try {
       // Send all fields; the API ignores undefined but accepts all keys.
       await update.mutateAsync({
+        siteNameEn: form.siteNameEn || null,
+        siteNameCn: form.siteNameCn || null,
         logo: form.logo || null,
         phoneEn: form.phoneEn || null,
         phoneCn: form.phoneCn || null,
@@ -99,7 +103,10 @@ export function SettingsEditor() {
     }
   }
 
-  if (isLoading || !data) {
+  // Only block on the initial load. When the settings row is missing (!data),
+  // we still render the (empty) form so the admin can hit Save — the PUT
+  // endpoint auto-creates the row.
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-24 rounded-xl" />
@@ -118,8 +125,8 @@ export function SettingsEditor() {
           </h2>
           <p className="text-sm text-muted-foreground">
             {lang === "cn"
-              ? "管理 Logo、联系方式与社交媒体链接"
-              : "Manage logo, contact info and social links"}
+              ? "管理站点名称、Logo、联系方式与社交媒体链接"
+              : "Manage site name, logo, contact info and social links"}
           </p>
         </div>
         <Button onClick={onSave} disabled={update.isPending}>
@@ -132,21 +139,47 @@ export function SettingsEditor() {
         </Button>
       </div>
 
-      {/* Logo */}
+      {/* Brand: site name + logo */}
       <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <ImageIcon className="size-4 text-brand" />
-            {lang === "cn" ? "网站 Logo" : "Site Logo"}
+            {lang === "cn" ? "品牌信息" : "Brand"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FieldLabel label={`${lang === "cn" ? "站点名称" : "Site Name"} (EN)`}>
+              <Input
+                value={form.siteNameEn}
+                onChange={(e) => setField("siteNameEn", e.target.value)}
+                placeholder="AudioCenter"
+              />
+            </FieldLabel>
+            <FieldLabel label={`${lang === "cn" ? "站点名称" : "Site Name"} (中文)`}>
+              <Input
+                value={form.siteNameCn}
+                onChange={(e) => setField("siteNameCn", e.target.value)}
+                placeholder="AudioCenter 专业音响"
+              />
+            </FieldLabel>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {lang === "cn"
+              ? "站点名称显示在页头、页脚、后台与浏览器标签页标题。"
+              : "The site name shows in the header, footer, admin chrome and the browser tab title."}
+          </p>
+          <Separator />
           <ImageUploader
-            label={lang === "cn" ? "Logo 图片" : "Logo Image"}
+            label={lang === "cn" ? "网站 Logo" : "Site Logo"}
             value={form.logo}
             onChange={(v) => setField("logo", v)}
             previewClassName="h-24 w-24"
-            hint={lang === "cn" ? "推荐透明背景 PNG/SVG" : "Transparent PNG/SVG recommended"}
+            hint={
+              lang === "cn"
+                ? "推荐透明背景 PNG；将用作页头 Logo 与浏览器标签页图标"
+                : "Transparent PNG recommended; used as the header logo and the browser favicon"
+            }
           />
         </CardContent>
       </Card>

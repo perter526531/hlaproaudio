@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Shield, Volume2 } from "lucide-react";
+import { Menu, Shield } from "lucide-react";
 import { useI18n, tr, type TKey } from "@/store/i18n";
 import { useNav, type Route } from "@/store/nav";
 import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/brand";
 import {
   Sheet,
   SheetContent,
@@ -51,18 +52,7 @@ export function Header() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <button
-            onClick={() => go({ name: "home" })}
-            className="flex items-center gap-2 shrink-0 group"
-            aria-label="AudioCenter home"
-          >
-            <span className="inline-flex items-center justify-center size-9 rounded-md brand-gradient text-primary-foreground">
-              <Volume2 className="size-5" />
-            </span>
-            <span className="font-bold tracking-widest text-base sm:text-lg">
-              AUDIO<span className="text-brand">CENTER</span>
-            </span>
-          </button>
+          <Brand size="md" onClick={() => go({ name: "home" })} />
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
@@ -127,9 +117,8 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] sm:max-w-sm">
                 <SheetHeader className="pr-8">
-                  <SheetTitle className="flex items-center gap-2">
-                    <Volume2 className="size-5 text-brand" />
-                    AUDIO<span className="text-brand">CENTER</span>
+                  <SheetTitle asChild>
+                    <Brand size="sm" />
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col gap-1 px-2" aria-label="Mobile">
