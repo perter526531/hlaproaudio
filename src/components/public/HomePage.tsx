@@ -140,7 +140,7 @@ export function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="bg-background/40 text-white border-white/30 hover:bg-white/10 hover:text-white"
+                className="bg-white/10 text-white border-white/50 hover:bg-white/20 hover:text-white"
                 onClick={() => go({ name: "contact" })}
               >
                 <Mail className="size-4" />

@@ -136,20 +136,20 @@ export function ContactPage() {
                 <div className="absolute inset-0 brand-gradient opacity-30" />
                 {/* Decorative grid pattern */}
                 <div
-                  className="absolute inset-0 opacity-20"
+                  className="absolute inset-0 opacity-100"
                   style={{
                     backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+                      "linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)",
                     backgroundSize: "32px 32px",
                   }}
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                   <MapPin className="size-10 text-brand mb-2" />
-                  <div className="text-sm text-white/90 font-medium">
+                  <div className="text-sm text-foreground font-medium">
                     {tr("ci_address", lang)}
                   </div>
                   {address ? (
-                    <div className="text-sm text-white/80 max-w-md">{address}</div>
+                    <div className="text-sm text-muted-foreground max-w-md">{address}</div>
                   ) : null}
                 </div>
               </div>
