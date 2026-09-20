@@ -63,7 +63,7 @@ function HeroBlock({
   content: string | null;
 }) {
   return (
-    <section className="relative w-full h-[60vh] min-h-[360px] overflow-hidden bg-black">
+    <section className="relative w-full h-[60vh] min-h-[360px] overflow-hidden bg-muted">
       {image ? (
         <img
           src={image}

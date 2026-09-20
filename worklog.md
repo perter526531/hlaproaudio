@@ -391,3 +391,24 @@ Stage Summary:
 - Clone-and-run now works on any machine: `bun install` (postinstall generates Prisma client) → `bun run dev` → site + admin work from the committed starter DB.
 - Fallback for empty/corrupt DB: `bun run setup` regenerates the client + schema + sample data in one command.
 - Root cause (absolute .env path) + missing client generation + missing seed/setup docs all addressed.
+
+---
+Task ID: 11
+Agent: main (white theme switch)
+Task: Switch the whole site from dark to a white-background theme per customer request; re-tune font/button/card colors to match
+
+Work Log:
+- Rewrote src/app/globals.css: :root and .dark both resolve to a LIGHT palette (white canvas, dark-gray text, light-gray muted/borders, deep-crimson primary). Old deep-black canvas removed.
+  - --background #fff (white), --foreground #16181d (dark gray text), --primary #d00016 (AudioCenter-style deep crimson), --muted near-white gray, --border light gray, --sidebar very light gray.
+  - Brand utilities (.text-brand/.bg-brand/.border-brand/.brand-gradient) re-tuned to the deeper crimson so red reads well on white.
+  - Scrollbar thumb lightened for white theme.
+  - .hero-overlay / .hero-overlay-r kept (dark scrims over hero/banner IMAGES for white-text legibility — standard on white sites).
+- layout.tsx: removed className="dark" from <html> so the light :root applies (suppressHydrationWarning retained).
+- Hardcoded dark container/placeholder backgrounds swapped to bg-muted: BannerSection (bg-black→bg-muted), HomePage hero, ContentBlock hero, ProductCard image well (bg-black/40→bg-muted), NewsPage image well, ProductDetailPage carousel well.
+- ProductDetailPage: removed prose-invert (dark prose) → plain prose so the description renders dark text on white.
+- Kept text-white ONLY where it belongs: over hero/banner images (dark overlay) and on red brand-gradient buttons/destructive buttons (white-on-red is correct on white).
+- Verified via curl: HTML <html lang="zh"> (no dark class), <body class="... bg-background text-foreground">; served CSS = --background #fff, --foreground #16181d, --primary #d00016. (Browser visual check blocked by the sandbox's dev-server instability between tool calls, but the built CSS/HTML are conclusively light.)
+
+Stage Summary:
+- Site is now white-background with dark-gray text and a deep-crimson brand accent; buttons/cards/borders/scrollbar all re-tuned for the white canvas. Hero banners keep dark scrims so their white text stays legible over images.
+- Lint clean. Pushed.

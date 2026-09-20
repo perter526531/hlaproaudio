@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh" className="dark" suppressHydrationWarning>
+    <html lang="zh" suppressHydrationWarning>
       <body className={`${geistSans.variable} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />

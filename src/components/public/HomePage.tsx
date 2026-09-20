@@ -99,7 +99,7 @@ export function HomePage() {
   return (
     <>
       {/* Hero with CTA buttons */}
-      <section className="relative w-full h-[60vh] min-h-[420px] overflow-hidden bg-black">
+      <section className="relative w-full h-[60vh] min-h-[420px] overflow-hidden bg-muted">
         {page.bannerImage ? (
           <img
             src={page.bannerImage}

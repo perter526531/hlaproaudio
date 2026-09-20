@@ -36,7 +36,7 @@ export function ProductCard({ product }: { product: Product }) {
       }}
       aria-label={name}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-black/40">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {cover ? (
           <img
             src={cover}

@@ -17,7 +17,7 @@ export function BannerSection({ page }: { page: SitePage }) {
 
   return (
     <section
-      className="relative w-full h-[40vh] md:h-[55vh] min-h-[280px] overflow-hidden bg-black"
+      className="relative w-full h-[40vh] md:h-[55vh] min-h-[280px] overflow-hidden bg-muted"
       aria-label={title ?? undefined}
     >
       {bg ? (

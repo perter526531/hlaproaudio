@@ -156,7 +156,7 @@ export function NewsPage() {
                     key={i}
                     className="group rounded-xl border border-border bg-card overflow-hidden hover:border-brand transition-colors"
                   >
-                    <div className="relative aspect-[16/9] overflow-hidden bg-black/40">
+                    <div className="relative aspect-[16/9] overflow-hidden bg-muted">
                       <img
                         src={n.image}
                         alt={title}

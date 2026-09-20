@@ -256,7 +256,7 @@ function ProductDetail({
           <h2 className="text-2xl font-bold tracking-tight mb-4">
             <span className="text-brand">{tr("description", lang)}</span>
           </h2>
-          <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed whitespace-pre-line text-base md:text-lg">
+          <div className="prose max-w-none text-muted-foreground leading-relaxed whitespace-pre-line text-base md:text-lg">
             {desc}
           </div>
         </section>
@@ -321,7 +321,7 @@ function ProductImageCarousel({ images }: { images: CarouselImg[] }) {
           <CarouselContent>
             {images.map((img, i) => (
               <CarouselItem key={i}>
-                <div className="aspect-[4/3] rounded-xl overflow-hidden border border-border bg-black/40">
+                <div className="aspect-[4/3] rounded-xl overflow-hidden border border-border bg-muted">
                   <img
                     src={img.url}
                     alt={img.alt}
