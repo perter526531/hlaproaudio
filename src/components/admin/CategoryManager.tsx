@@ -192,7 +192,7 @@ function CategoryNode({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-1 opacity-70 transition-opacity hover:opacity-100">
           {canAddChild && (
             <Button
               size="icon"

@@ -60,3 +60,6 @@ tool-results/
 db/*.db-journal
 db/*.db-wal
 db/*.db-shm
+
+# pasted/user screenshots (not project assets)
+/upload/
