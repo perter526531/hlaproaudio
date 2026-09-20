@@ -412,3 +412,53 @@ Work Log:
 Stage Summary:
 - Site is now white-background with dark-gray text and a deep-crimson brand accent; buttons/cards/borders/scrollbar all re-tuned for the white canvas. Hero banners keep dark scrims so their white text stays legible over images.
 - Lint clean. Pushed.
+
+---
+Task ID: 12
+Agent: full-stack-developer (stats/features editable)
+Task: Make the stats + features content blocks fully admin-editable (values/items stored as JSON in contentEn)
+Work Log:
+- Read worklog.md for context, then read `src/components/public/ContentBlock.tsx`, `src/components/admin/PageManager.tsx`, `src/lib/types.ts`, and `src/components/admin/types.ts` to confirm the existing `contentEn: String?` field, the `pick()`/`useI18n` bilingual helpers, and the current BlockDialog shape (type/titleEn/titleCn/contentEn/contentCn/image/order with plain textareas).
+- Confirmed the bug: `StatsBlock` rendered the hardcoded `STATS` array (only `title` was editable); `FeaturesBlock` rendered `DEFAULT_FEATURES` with only the `|`-split desc override (titles + icons were fixed) → admin edits never reached the public site.
+- Edited `src/components/public/ContentBlock.tsx`:
+  - Added a `parseJsonArray<T>(raw)` helper (returns null on parse failure or non-array, including the empty-string case).
+  - Switched `case "stats"` and `case "features"` to pass `contentEn={block.contentEn}` (raw) into the respective blocks instead of the picked `content` string.
+  - `StatsBlock` now parses `contentEn` as `[{value,labelEn,labelCn}]`; if parse fails OR the array is empty, it falls back to the `STATS` constant. Renders up to 6 items, picks label via `pick(labelEn,labelCn,lang)`. Kept the red `brand-gradient` band + white text styling and the `title` heading.
+  - `FeaturesBlock` now parses `contentEn` as `[{titleEn,titleCn,descEn,descCn}]`; falls back to `DEFAULT_FEATURES` if parse fails/empty (this covers the old `|`-split text and plain text — no crash). Renders up to 4 items, icons cycle via `icons[i % icons.length]` (kept `[Cpu, Award, Globe2, Headphones]`), picks title/desc via `pick()`. Kept the `bg-card/40` wrapper + `brand-gradient` icon chips. Made `Feature.icon` optional (it was dead render data; DEFAULT_FEATURES still carries it, so `Microscope`/`Factory` imports stay used).
+  - Left hero/text/image/quote blocks and the `ContentBlock` switch signature untouched.
+- Edited `src/components/admin/PageManager.tsx` — the `BlockDialog`:
+  - Added `StatsRow`/`FeaturesRow` types, `emptyStatsRow`/`emptyFeaturesRow`, `parseStatsRows`/`parseFeaturesRows` (with defensive `typeof === "string"` field normalization + fallback to N empty rows), and `serializeStatsRows`/`serializeFeaturesRows` (drop rows where value/title is empty) as module-level helpers.
+  - Added `StatsEditor` + `FeaturesEditor` components: repeatable rows (stats: value + labelEn + labelCn inputs in a `sm:grid-cols-[100px_1fr_1fr]` row; features: titleEn/titleCn inputs + descEn/descCn small textareas in `md:grid-cols-2`), each row with a trash remove button, plus an Add-row (Plus) button and a bilingual hint line. Uses only existing shadcn primitives (Button, Input, Textarea, Label) + the already-imported `Plus`/`Trash2` icons.
+  - BlockDialog now holds `statsRows`/`featuresRows` local state alongside `form`. The init effect (on `[open, block]`) sets the form AND seeds the structured rows from `parseStatsRows(form.contentEn)` / `parseFeaturesRows(form.contentEn)` so an existing stats/features block loads its items correctly when the dialog opens.
+  - Replaced the Select's `onValueChange` with a new `onTypeChange(v)` that sets `form.type` and re-parses the current `form.contentEn` into the matching row shape — so toggling type never loses the underlying JSON (the raw contentEn is preserved; switching back re-reads it).
+  - `updateStatsRow`/`updateFeaturesRow` mutate the local rows AND immediately serialize the rows back into `form.contentEn` as a JSON string (single source of truth for saving). `addXRow` appends an empty row; `removeXRow` filters the row and re-serializes.
+  - Replaced the always-on `contentEn`/`contentCn` textarea pair with a conditional: `stats` → `<StatsEditor>`, `features` → `<FeaturesEditor>`, otherwise the original dual textarea (text/image/hero/quote unchanged).
+  - `onSave` now nulls `contentCn` for stats/features (the bilingual payload lives entirely in `contentEn` JSON, so no stale text lingers when a block is switched from a free-text type into a structured one). The rest of `onSave` (sending `contentEn: form.contentEn || null`, etc.) is unchanged — no API change.
+- Ran `bun run lint` → clean (zero errors, zero warnings). Did not run `bun run build`. Dev server (port 3000) keeps hot-reloading via Turbopack; no restart.
+
+Stage Summary:
+- Files changed: `src/components/public/ContentBlock.tsx`, `src/components/admin/PageManager.tsx` (only these two, per the constraint).
+- Key decisions:
+  - Stored structured bilingual data as JSON in the existing `contentEn` field (no schema change, no API change). `contentCn` is intentionally unused for stats/features (nulled on save) to keep a single source of truth.
+  - `parseJsonArray` returns null on failure/empty so the public renderer falls back to the original `STATS`/`DEFAULT_FEATURES` constants — this is the backward-compat path: any old `|`-split text or plain-text contentEn simply renders the defaults instead of crashing.
+  - The admin editor keeps `form.contentEn` as the single source of truth (what gets saved) and mirrors it into local `statsRows`/`featuresRows` state for editing. Row edits serialize back to `form.contentEn` on every change; type switches re-parse `form.contentEn` for the new shape (preserving the raw JSON so toggling back restores the original rows).
+  - Public FeaturesBlock now renders up to 4 items (was 3) with cycling icons, matching the admin's 1–6 item input sliced to 4. StatsBlock renders up to 6.
+  - Defensive `typeof === "string"` checks on every parsed field so hand-edited / malformed JSON in `contentEn` never throws on the public site.
+- Lint clean. No new dependencies. No tests added (per constraint).
+
+---
+Task ID: 13
+Agent: main (block-editability + home/category consistency)
+Task: Fix "admin edits don't reflect on public" + home missing content + category admin/page inconsistency
+
+Work Log:
+- ROOT CAUSE 1 (stats/features not editable): ContentBlock rendered StatsBlock from a hardcoded STATS array and FeaturesBlock from DEFAULT_FEATURES — admin could only edit the section title, not the actual numbers/items => "后台改了前台不对应". Delegated to subagent (Task 12): both blocks now parse structured JSON from contentEn (stats: [{value,labelEn,labelCn}]; features: [{titleEn,titleCn,descEn,descCn}]) with fallback to defaults, and the PageManager BlockDialog shows repeatable bilingual row editors for those types. VERIFIED end-to-end: admin PUT stats contentEn JSON (99+/测试数据) -> 200 -> public home immediately shows "99+ / 测试数据".
+- ROOT CAUSE 2 (home missing content): HomePage filtered out "hero" content blocks (.filter(b=>b.type!=="hero")), so the seeded home "hero" block ("Global Sound, Local Heart") was never rendered — admin could see/edit it but it never showed on the public home. Removed the filter (all block types now render) and removed the redundant "hero" block from the home seed (its image duplicated the page banner). VERIFIED: home now renders hero(banner) + features + stats + R&D text + featured products + solutions + CTA — nothing missing.
+- ROOT CAUSE 3 (category admin vs page): public ProductsPage sidebar collapsed ALL categories by default (only L1 names showed; L2/L3 hidden until clicked), while the admin CategoryManager showed the full expanded tree => looked inconsistent. Changed the public CategoryNode default-open: L1 (level 0) categories now expand by default (visitors see L2 children immediately), deeper levels auto-expand only when the active category is in them.
+- Re-seeded clean (home has features/stats/text, no redundant hero block).
+
+Stage Summary:
+- The admin can now fully edit every content block (incl. stats values + features items) and the public site reflects it live (verified 99+ test).
+- Home page renders all sections; no filtered-out content.
+- Public category tree shows L1+L2 by default, matching the admin's expanded view.
+- Lint clean. Pushed.

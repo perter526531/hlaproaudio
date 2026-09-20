@@ -561,6 +561,248 @@ function BlockRow({
   );
 }
 
+/* ----------------------- Structured content editors (stats / features) ----------------------- */
+
+type StatsRow = { value: string; labelEn: string; labelCn: string };
+type FeaturesRow = {
+  titleEn: string;
+  titleCn: string;
+  descEn: string;
+  descCn: string;
+};
+
+function emptyStatsRow(): StatsRow {
+  return { value: "", labelEn: "", labelCn: "" };
+}
+function emptyFeaturesRow(): FeaturesRow {
+  return { titleEn: "", titleCn: "", descEn: "", descCn: "" };
+}
+
+/** Parse contentEn into a stats row list; falls back to 4 empty rows. */
+function parseStatsRows(raw: string | null | undefined): StatsRow[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw ?? "");
+  } catch {
+    parsed = null;
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return [emptyStatsRow(), emptyStatsRow(), emptyStatsRow(), emptyStatsRow()];
+  }
+  const rows = parsed
+    .map((r): StatsRow => ({
+      value:
+        r && typeof (r as StatsRow).value === "string" ? (r as StatsRow).value : "",
+      labelEn:
+        r && typeof (r as StatsRow).labelEn === "string" ? (r as StatsRow).labelEn : "",
+      labelCn:
+        r && typeof (r as StatsRow).labelCn === "string" ? (r as StatsRow).labelCn : "",
+    }))
+    .slice(0, 6);
+  return rows.length > 0
+    ? rows
+    : [emptyStatsRow(), emptyStatsRow(), emptyStatsRow(), emptyStatsRow()];
+}
+
+/** Parse contentEn into a features row list; falls back to 3 empty rows. */
+function parseFeaturesRows(raw: string | null | undefined): FeaturesRow[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw ?? "");
+  } catch {
+    parsed = null;
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return [emptyFeaturesRow(), emptyFeaturesRow(), emptyFeaturesRow()];
+  }
+  const rows = parsed
+    .map((r): FeaturesRow => ({
+      titleEn:
+        r && typeof (r as FeaturesRow).titleEn === "string"
+          ? (r as FeaturesRow).titleEn
+          : "",
+      titleCn:
+        r && typeof (r as FeaturesRow).titleCn === "string"
+          ? (r as FeaturesRow).titleCn
+          : "",
+      descEn:
+        r && typeof (r as FeaturesRow).descEn === "string"
+          ? (r as FeaturesRow).descEn
+          : "",
+      descCn:
+        r && typeof (r as FeaturesRow).descCn === "string"
+          ? (r as FeaturesRow).descCn
+          : "",
+    }))
+    .slice(0, 6);
+  return rows.length > 0
+    ? rows
+    : [emptyFeaturesRow(), emptyFeaturesRow(), emptyFeaturesRow()];
+}
+
+/** Serialize stats rows to a JSON string, dropping rows with empty value. */
+function serializeStatsRows(rows: StatsRow[]): string {
+  const cleaned = rows
+    .filter((r) => r.value.trim() !== "")
+    .map((r) => ({ value: r.value, labelEn: r.labelEn, labelCn: r.labelCn }));
+  return cleaned.length > 0 ? JSON.stringify(cleaned) : "";
+}
+
+/** Serialize features rows to a JSON string, dropping rows with no title. */
+function serializeFeaturesRows(rows: FeaturesRow[]): string {
+  const cleaned = rows.filter(
+    (r) => r.titleEn.trim() !== "" || r.titleCn.trim() !== ""
+  );
+  return cleaned.length > 0 ? JSON.stringify(cleaned) : "";
+}
+
+function StatsEditor({
+  rows,
+  onUpdate,
+  onAdd,
+  onRemove,
+}: {
+  rows: StatsRow[];
+  onUpdate: (i: number, field: keyof StatsRow, value: string) => void;
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+}) {
+  const lang = useI18n((s) => s.lang);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          {lang === "cn" ? "数据项" : "Stat Items"}
+        </Label>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="size-3.5" />
+          {lang === "cn" ? "添加" : "Add"}
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {lang === "cn"
+          ? "value 为数值（如 20+）；labelEn / labelCn 为双语说明。空 value 的行保存时会被忽略。"
+          : "value is the figure (e.g. 20+); labelEn / labelCn are bilingual labels. Rows with an empty value are dropped on save."}
+      </p>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border/60 bg-muted/30 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-[100px_1fr_1fr]">
+                <Input
+                  placeholder="20+"
+                  value={row.value}
+                  onChange={(e) => onUpdate(i, "value", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "英文标签" : "Label (EN)"}
+                  value={row.labelEn}
+                  onChange={(e) => onUpdate(i, "labelEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "中文标签" : "Label (中文)"}
+                  value={row.labelCn}
+                  onChange={(e) => onUpdate(i, "labelCn", e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onRemove(i)}
+                title={lang === "cn" ? "删除" : "Remove"}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FeaturesEditor({
+  rows,
+  onUpdate,
+  onAdd,
+  onRemove,
+}: {
+  rows: FeaturesRow[];
+  onUpdate: (i: number, field: keyof FeaturesRow, value: string) => void;
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+}) {
+  const lang = useI18n((s) => s.lang);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          {lang === "cn" ? "特性项" : "Feature Items"}
+        </Label>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="size-3.5" />
+          {lang === "cn" ? "添加" : "Add"}
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {lang === "cn"
+          ? "titleEn / titleCn 为双语标题；descEn / descCn 为双语描述；图标按顺序自动循环。无标题的行保存时会被忽略。"
+          : "titleEn / titleCn are bilingual titles; descEn / descCn bilingual descriptions; icons cycle by index. Rows without any title are dropped on save."}
+      </p>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border/60 bg-muted/30 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-2">
+                <Input
+                  placeholder={lang === "cn" ? "标题 (EN)" : "Title (EN)"}
+                  value={row.titleEn}
+                  onChange={(e) => onUpdate(i, "titleEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "标题 (中文)" : "Title (中文)"}
+                  value={row.titleCn}
+                  onChange={(e) => onUpdate(i, "titleCn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "描述 (EN)" : "Description (EN)"}
+                  value={row.descEn}
+                  onChange={(e) => onUpdate(i, "descEn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "描述 (中文)" : "Description (中文)"}
+                  value={row.descCn}
+                  onChange={(e) => onUpdate(i, "descCn", e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onRemove(i)}
+                title={lang === "cn" ? "删除" : "Remove"}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------- Block dialog (add/edit) ----------------------- */
 
 function BlockDialog({
@@ -588,32 +830,101 @@ function BlockDialog({
     image: "",
     order: 0,
   });
+  const [statsRows, setStatsRows] = React.useState<StatsRow[]>(() => [
+    emptyStatsRow(),
+    emptyStatsRow(),
+    emptyStatsRow(),
+    emptyStatsRow(),
+  ]);
+  const [featuresRows, setFeaturesRows] = React.useState<FeaturesRow[]>(() => [
+    emptyFeaturesRow(),
+    emptyFeaturesRow(),
+    emptyFeaturesRow(),
+  ]);
 
+  // Initialize form + structured rows when the dialog opens (or the block prop
+  // changes after a refetch). Rows are re-derived from the saved contentEn
+  // JSON so an existing stats / features block loads its items correctly.
   React.useEffect(() => {
-    if (open) {
-      setForm({
-        type: block?.type ?? "text",
-        titleEn: block?.titleEn ?? "",
-        titleCn: block?.titleCn ?? "",
-        contentEn: block?.contentEn ?? "",
-        contentCn: block?.contentCn ?? "",
-        image: block?.image ?? "",
-        order: block?.order ?? 0,
-      });
-    }
+    if (!open) return;
+    const nextForm = {
+      type: block?.type ?? "text",
+      titleEn: block?.titleEn ?? "",
+      titleCn: block?.titleCn ?? "",
+      contentEn: block?.contentEn ?? "",
+      contentCn: block?.contentCn ?? "",
+      image: block?.image ?? "",
+      order: block?.order ?? 0,
+    };
+    setForm(nextForm);
+    if (nextForm.type === "stats") setStatsRows(parseStatsRows(nextForm.contentEn));
+    else if (nextForm.type === "features")
+      setFeaturesRows(parseFeaturesRows(nextForm.contentEn));
   }, [open, block]);
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
+  // When the admin switches the block type, re-initialize the structured
+  // editor from the current contentEn (so toggling type never loses data).
+  // `form.contentEn` is read from the closure (current value, which is the
+  // pre-type-change contentEn); type itself is the only field mutated here.
+  function onTypeChange(v: string) {
+    const nextType = v as ContentBlockType;
+    setForm((f) => ({ ...f, type: nextType }));
+    if (nextType === "stats") setStatsRows(parseStatsRows(form.contentEn));
+    else if (nextType === "features")
+      setFeaturesRows(parseFeaturesRows(form.contentEn));
+  }
+
+  function updateStatsRow(i: number, field: keyof StatsRow, value: string) {
+    const next = statsRows.map((r, idx) =>
+      idx === i ? { ...r, [field]: value } : r
+    );
+    setStatsRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeStatsRows(next) }));
+  }
+  function addStatsRow() {
+    setStatsRows((prev) => [...prev, emptyStatsRow()]);
+  }
+  function removeStatsRow(i: number) {
+    const next = statsRows.filter((_, idx) => idx !== i);
+    setStatsRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeStatsRows(next) }));
+  }
+
+  function updateFeaturesRow(
+    i: number,
+    field: keyof FeaturesRow,
+    value: string
+  ) {
+    const next = featuresRows.map((r, idx) =>
+      idx === i ? { ...r, [field]: value } : r
+    );
+    setFeaturesRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeFeaturesRows(next) }));
+  }
+  function addFeaturesRow() {
+    setFeaturesRows((prev) => [...prev, emptyFeaturesRow()]);
+  }
+  function removeFeaturesRow(i: number) {
+    const next = featuresRows.filter((_, idx) => idx !== i);
+    setFeaturesRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeFeaturesRows(next) }));
+  }
+
   async function onSave() {
+    // For stats / features, all bilingual data lives inside contentEn JSON;
+    // contentCn is unused — clear it so no stale text lingers when a block is
+    // switched from text/hero/etc. into a structured type.
+    const isStructured = form.type === "stats" || form.type === "features";
     const data = {
       type: form.type,
       titleEn: form.titleEn || null,
       titleCn: form.titleCn || null,
       contentEn: form.contentEn || null,
-      contentCn: form.contentCn || null,
+      contentCn: isStructured ? null : form.contentCn || null,
       image: form.image || null,
       order: Number(form.order) || 0,
     };
@@ -653,10 +964,7 @@ function BlockDialog({
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label={lang === "cn" ? "类型" : "Type"}>
-              <Select
-                value={form.type}
-                onValueChange={(v) => setField("type", v as ContentBlockType)}
-              >
+              <Select value={form.type} onValueChange={onTypeChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -695,22 +1003,38 @@ function BlockDialog({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label={`${lang === "cn" ? "内容" : "Content"} (EN)`}>
-              <Textarea
-                rows={4}
-                value={form.contentEn}
-                onChange={(e) => setField("contentEn", e.target.value)}
-              />
-            </Field>
-            <Field label={`${lang === "cn" ? "内容" : "Content"} (中文)`}>
-              <Textarea
-                rows={4}
-                value={form.contentCn}
-                onChange={(e) => setField("contentCn", e.target.value)}
-              />
-            </Field>
-          </div>
+          {form.type === "stats" ? (
+            <StatsEditor
+              rows={statsRows}
+              onUpdate={updateStatsRow}
+              onAdd={addStatsRow}
+              onRemove={removeStatsRow}
+            />
+          ) : form.type === "features" ? (
+            <FeaturesEditor
+              rows={featuresRows}
+              onUpdate={updateFeaturesRow}
+              onAdd={addFeaturesRow}
+              onRemove={removeFeaturesRow}
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label={`${lang === "cn" ? "内容" : "Content"} (EN)`}>
+                <Textarea
+                  rows={4}
+                  value={form.contentEn}
+                  onChange={(e) => setField("contentEn", e.target.value)}
+                />
+              </Field>
+              <Field label={`${lang === "cn" ? "内容" : "Content"} (中文)`}>
+                <Textarea
+                  rows={4}
+                  value={form.contentCn}
+                  onChange={(e) => setField("contentCn", e.target.value)}
+                />
+              </Field>
+            </div>
+          )}
 
           <ImageUploader
             label={lang === "cn" ? "图片" : "Image"}

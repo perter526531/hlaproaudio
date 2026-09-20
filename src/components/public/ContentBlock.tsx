@@ -7,6 +7,20 @@ import { pick, type ContentBlock as ContentBlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
+ * Safely parse a JSON string into an array. Returns null if parsing fails or
+ * the result is not an array. Used by stats / features blocks to read their
+ * structured bilingual payload from `contentEn`.
+ */
+function parseJsonArray<T>(raw: string | null | undefined): T[] | null {
+  try {
+    const a = JSON.parse(raw ?? "");
+    return Array.isArray(a) ? a : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Renders a single content block based on its type. Bilingual fields are
  * picked from `lang`. Used by HomePage / AboutPage / SolutionsPage / etc.
  */
@@ -23,9 +37,9 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
     case "image":
       return <ImageBlock image={block.image} content={content} title={title} />;
     case "features":
-      return <FeaturesBlock title={title} content={content} />;
+      return <FeaturesBlock title={title} contentEn={block.contentEn} />;
     case "stats":
-      return <StatsBlock title={title} />;
+      return <StatsBlock title={title} contentEn={block.contentEn} />;
     case "quote":
       return <QuoteBlock content={content} title={title} />;
     default:
@@ -193,7 +207,9 @@ function ImageBlock({
 }
 
 interface Feature {
-  icon: React.ReactNode;
+  // icon is unused at render time (the icons array maps by index); kept for
+  // backward-compat with DEFAULT_FEATURES.
+  icon?: React.ReactNode;
   titleEn: string;
   titleCn: string;
   descEn: string;
@@ -226,26 +242,29 @@ const DEFAULT_FEATURES: Feature[] = [
 
 function FeaturesBlock({
   title,
-  content,
+  contentEn,
 }: {
   title: string | null;
-  content: string | null;
+  contentEn: string | null;
 }) {
   const lang = useI18n((s) => s.lang);
-  // Split content by "|" to allow per-feature overrides; fall back to defaults.
-  let features = DEFAULT_FEATURES;
-  if (content) {
-    const parts = content.split("|").map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 3) {
-      features = DEFAULT_FEATURES.map((f, i) => ({
-        ...f,
-        ...(i < parts.length
-          ? lang === "en"
-            ? { descEn: parts[i], descCn: parts[i] }
-            : { descCn: parts[i], descEn: parts[i] }
-          : {}),
-      }));
-    }
+  // Parse contentEn as a JSON array of bilingual feature objects. If parsing
+  // fails OR the array is empty (e.g. old `|`-split text or plain text), fall
+  // back to DEFAULT_FEATURES so the public site never breaks.
+  const parsed = parseJsonArray<{
+    titleEn?: string;
+    titleCn?: string;
+    descEn?: string;
+    descCn?: string;
+  }>(contentEn);
+  let features: Feature[] = DEFAULT_FEATURES;
+  if (parsed && parsed.length > 0) {
+    features = parsed.slice(0, 4).map((f) => ({
+      titleEn: typeof f.titleEn === "string" ? f.titleEn : "",
+      titleCn: typeof f.titleCn === "string" ? f.titleCn : "",
+      descEn: typeof f.descEn === "string" ? f.descEn : "",
+      descCn: typeof f.descCn === "string" ? f.descCn : "",
+    }));
   }
   const icons = [Cpu, Award, Globe2, Headphones];
   return (
@@ -256,8 +275,8 @@ function FeaturesBlock({
         </h2>
       ) : null}
       <div className="grid sm:grid-cols-3 gap-6">
-        {features.slice(0, 3).map((f, i) => {
-          const Icon = icons[i] ?? Globe2;
+        {features.slice(0, 4).map((f, i) => {
+          const Icon = icons[i % icons.length];
           const t = pick(f.titleEn, f.titleCn, lang) ?? "";
           const d = pick(f.descEn, f.descCn, lang) ?? "";
           return (
@@ -289,8 +308,29 @@ const STATS: { value: string; labelEn: string; labelCn: string }[] = [
   { value: "30,000m²", labelEn: "Manufacturing Base", labelCn: "生产基地" },
 ];
 
-function StatsBlock({ title }: { title: string | null }) {
+function StatsBlock({
+  title,
+  contentEn,
+}: {
+  title: string | null;
+  contentEn: string | null;
+}) {
   const lang = useI18n((s) => s.lang);
+  // Parse contentEn as a JSON array of { value, labelEn, labelCn } items.
+  // If parsing fails OR the array is empty, fall back to the STATS constant.
+  const parsed = parseJsonArray<{
+    value?: string;
+    labelEn?: string;
+    labelCn?: string;
+  }>(contentEn);
+  const stats =
+    parsed && parsed.length > 0
+      ? parsed.slice(0, 6).map((s) => ({
+          value: typeof s.value === "string" ? s.value : "",
+          labelEn: typeof s.labelEn === "string" ? s.labelEn : "",
+          labelCn: typeof s.labelCn === "string" ? s.labelCn : "",
+        }))
+      : STATS;
   return (
     <section className="relative py-12 md:py-16 brand-gradient">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -300,23 +340,26 @@ function StatsBlock({ title }: { title: string | null }) {
           </h2>
         ) : null}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {STATS.map((s, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="text-center"
-            >
-              <div className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-                {s.value}
-              </div>
-              <div className="mt-2 text-sm md:text-base text-white/80">
-                {lang === "en" ? s.labelEn : s.labelCn}
-              </div>
-            </motion.div>
-          ))}
+          {stats.map((s, i) => {
+            const label = pick(s.labelEn, s.labelCn, lang) ?? "";
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className="text-center"
+              >
+                <div className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+                  {s.value}
+                </div>
+                <div className="mt-2 text-sm md:text-base text-white/80">
+                  {label}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

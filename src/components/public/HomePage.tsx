@@ -151,12 +151,12 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Page content blocks (excluding the optional "hero" block already covered) */}
-      {page.contentBlocks
-        .filter((b) => b.type !== "hero")
-        .map((b) => (
-          <ContentBlock key={b.id} block={b} />
-        ))}
+      {/* Page content blocks (all types render; the home hero above is the
+          page banner, "hero" blocks here are full-width image sections the
+          admin can add mid-page) */}
+      {page.contentBlocks.map((b) => (
+        <ContentBlock key={b.id} block={b} />
+      ))}
 
       {/* Featured Products */}
       <section className="py-12 md:py-20">

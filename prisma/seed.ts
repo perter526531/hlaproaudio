@@ -144,31 +144,20 @@ async function main() {
   });
 
   // Content blocks for home page
+  // (The home hero is driven by the page banner fields above — no separate
+  // "hero" block here, which would duplicate the banner image.)
   const homeBlocks = [
-    {
-      type: "hero",
-      titleEn: "Global Sound, Local Heart",
-      titleCn: "全球之声，本土之心",
-      contentEn: "Trusted by 80+ countries",
-      contentCn: "服务全球80+国家",
-      image: IMG.homeBanner,
-      order: 0,
-    },
     {
       type: "features",
       titleEn: "Why Choose AudioCenter",
       titleCn: "为什么选择 AudioCenter",
-      contentEn: "R&D driven manufacturing delivering reliable, musical and powerful sound systems.",
-      contentCn: "研发驱动的制造工艺，提供可靠、悦耳且富有冲击力的音响系统。",
-      order: 1,
+      order: 0,
     },
     {
       type: "stats",
       titleEn: "Our Numbers",
       titleCn: "数据见证",
-      contentEn: "",
-      contentCn: "",
-      order: 2,
+      order: 1,
     },
     {
       type: "text",
@@ -177,7 +166,7 @@ async function main() {
       contentEn: "A 50+ engineer R&D team covering acoustics, electronics, software and mechanical design powers continuous innovation across our product lines.",
       contentCn: "50余位工程师组成的研发团队，覆盖声学、电子、软件与结构设计，为产品线持续创新提供动力。",
       image: IMG.aboutWorkshop,
-      order: 3,
+      order: 2,
     },
   ];
   for (const b of homeBlocks) {

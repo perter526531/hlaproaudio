@@ -264,9 +264,13 @@ function CategoryNode({
 }) {
   const hasChildren = (cat.children ?? []).length > 0;
   const isActive = activeId === cat.id;
-  // Auto-expand if a descendant is active.
+  // Top-level (L1) categories expand by default so visitors see their L2
+  // children without clicking — matches the admin tree's expanded view.
+  // Deeper levels auto-expand only when the active category is in them.
   const [open, setOpen] = useState<boolean>(
-    () => hasChildren && !!activeId && isDescendantOrSelf(cat, activeId)
+    () =>
+      hasChildren &&
+      (level === 0 || (!!activeId && isDescendantOrSelf(cat, activeId)))
   );
 
   const name = pick(cat.nameEn, cat.nameCn, lang) ?? "";
