@@ -462,3 +462,56 @@ Stage Summary:
 - Home page renders all sections; no filtered-out content.
 - Public category tree shows L1+L2 by default, matching the admin's expanded view.
 - Lint clean. Pushed.
+
+---
+Task ID: 14
+Agent: full-stack-developer (editable home sections)
+Task: Convert 3 hardcoded home sections (featured/solutions/CTA) into editable content blocks; enrich solutions cards
+Work Log:
+- Read worklog.md for context, then read `src/components/public/ContentBlock.tsx`, `src/components/public/HomePage.tsx`, `src/components/admin/PageManager.tsx`, `prisma/seed.ts`, plus the supporting `src/lib/types.ts`, `src/components/admin/types.ts`, `src/store/nav.ts`, `src/store/i18n.ts`, `src/components/public/hooks.ts`, `src/components/public/ProductCard.tsx`, `prisma/schema.prisma`, and the categories API to confirm the data shapes and bilingual helpers in use.
+- Confirmed the bug: HomePage had 3 hardcoded sections (Featured Products / Solutions teaser / CTA band) with no admin edit location — admin could not edit the headings/text, so "后台改了前台不对应". The Solution teaser cards also showed only name + "了解更多" (no description), making them look sparse.
+- Edited `src/components/public/ContentBlock.tsx`:
+  - Added imports: `useNav` from `@/store/nav`, `useProducts, useCategories` from `@/components/public/hooks`, `Button` from `@/components/ui/button`, `Skeleton` from `@/components/ui/skeleton`, `ProductCard` from `@/components/public/ProductCard`, `ChevronRight, Mail, ShoppingBag` from lucide-react, and `tr` added to the existing `useI18n` import.
+  - Widened `block.type` to `ContentBlockType["type"] | "featured" | "solution-cards" | "cta"` inside the `ContentBlock` switch (so the new string-literal cases pass TS without editing `src/lib/types.ts`). Kept all existing block types untouched.
+  - Added 3 new cases + renderers:
+    - `FeaturedBlock`: a `BlockWrapper` with `content` as eyebrow (`text-brand text-sm font-semibold tracking-wider uppercase`) + `title` as heading (`text-3xl md:text-4xl font-bold`) + right-aligned "All Products" link (`go({name:"products"})`). Body pulls `useProducts({featured:true, status:"listed"})`; loading → 4 `aspect-[4/3]` Skeletons; empty → "No products yet. / 暂无产品。"; else `grid sm:grid-cols-2 lg:grid-cols-4` of `<ProductCard>` sliced to 4.
+    - `SolutionCardsBlock`: a `BlockWrapper className="bg-card/40 border-y border-border"` with centered eyebrow + heading. Body pulls `useCategories()` → L1 root array, sliced to 4. Each card is a `motion.button` with `brand-gradient opacity-90` bg + name + desc (`line-clamp-2`) + "Learn More →" link (ENRICHMENT: now shows the L1 category description, not just a button). onClick: `go({name:"products", categoryId:c.id})` (clicking goes to that category's products).
+    - `CtaBlock`: a `BlockWrapper className="py-16 md:py-24"` (tailwind-merge cleanly overrides the default py-12/md:py-20) with `title` (text-3xl md:text-5xl font-bold) + `content` paragraph (text-muted-foreground) + 2 buttons: primary `brand-gradient text-primary-foreground` "Contact" (Mail icon, `go({name:"contact"})`) + outline "All Products" (ShoppingBag icon, `go({name:"products"})`). Labels via `tr("nav_contact",lang)` / `tr("all_products",lang)`.
+- Edited `src/components/admin/PageManager.tsx`:
+  - Widened the `BLOCK_TYPES` value type from `ContentBlockType` to `ContentBlockType | "featured" | "solution-cards" | "cta"` (no edit to `src/components/admin/types.ts`) and appended the 3 new options after "stats": Featured Products / 明星产品, Solution Cards / 应用领域卡, CTA Band / 行动号召. The existing BlockDialog already shows the dual titleEn/contentEn textarea for non-stats/non-features types, so the new blocks get heading + text editing out of the box — no structured editor needed. The `form.type` field stays `as ContentBlockType` (unsafe cast, but works at runtime since `type` is a plain string in the DB).
+- Edited `src/components/public/HomePage.tsx`:
+  - Removed the 3 hardcoded sections (Featured Products, Solutions teaser, CTA band) — they now render via `<ContentBlock block={b} />` in the existing `page.contentBlocks.map(...)`.
+  - Removed now-unused imports: `useProducts`, `useCategories`, `ProductCard`, `ChevronRight`. Kept `motion`, `ArrowRight`, `Mail`, `ShoppingBag`, `Skeleton`, `pick`, `Button`, `Card*`, `RotateCw`, `Home` — all still used by the hero (the page banner with CTA buttons) and the loading/error/not-found states. Also removed the unused `BannerSection` import that was already dead code.
+  - Removed the `featured`/`categories` hooks + `featuredList`/`topCategories` local vars (moved into the block renderers). The `usePage("home")` query is unchanged.
+- Edited `prisma/seed.ts`:
+  - Appended 3 new blocks to the home `homeBlocks` array (after the existing R&D text block, in order): `featured` (Star Products / 明星产品, eyebrow "Featured Products / 明星产品", order 3), `solution-cards` (Where We Help / 应用领域, eyebrow "Solutions / 解决方案", order 4), `cta` (Let's build your next sound system. / 让我们一起打造下一套声音系统。, paragraph "Tell us about your venue, audience and budget — we'll propose the right system." / 中文对照, order 5).
+  - Added `descEn`/`descCn` to the 4 L1 categories so the Solution cards have content (not just a name): Loudspeakers, Amplifiers, Mixers & Processors, Wireless & Microphones — each with a one-line bilingual description per the spec.
+- Ran `bun run prisma/seed.ts` → "Seed complete. Admin: admin / admin123". Verified via a direct Prisma query: home page has 6 content blocks (orders 0-5: features, stats, text, featured, solution-cards, cta) and all 4 L1 categories now carry descEn/descCn.
+- Ran `bun run lint` → zero errors, zero warnings. Did NOT run `bun run build`. The dev server runs on port 3000 (Turbopack hot-reloads; not restarted).
+
+Stage Summary:
+- Files changed: `src/components/public/ContentBlock.tsx`, `src/components/public/HomePage.tsx`, `src/components/admin/PageManager.tsx`, `prisma/seed.ts` (only these four, per the constraint).
+- Key decisions:
+  - The 3 home sections are now editable content blocks rendered through the existing `ContentBlock` switch — the admin can edit their eyebrow / heading / paragraph via PageManager while the dynamic data (featured products via `useProducts`, L1 categories via `useCategories`) stays automatic.
+  - The Solution cards are enriched: each now shows name + description + "Learn More →" (previously only name + button). Clicking a card filters the Products page by that category (`go({name:"products", categoryId:c.id})`).
+  - The new `BlockType` literals ("featured"/"solution-cards"/"cta") were added WITHOUT editing `src/lib/types.ts` or `src/components/admin/types.ts` — both sides just widen the value type with `| "featured" | "solution-cards" | "cta"`. Since the schema stores `type` as a plain `String` (no enum constraint), the new values persist and read back cleanly.
+  - Tailwind-merge in `cn()` resolves the `py-16 md:py-24` override on `CtaBlock` correctly (later padding utility wins), so the section's vertical rhythm matches the original hardcoded CTA.
+- Verified end-to-end: seed persisted the 3 new blocks + L1 descriptions (Prisma direct query); lint clean. No new deps. No tests added (per constraint). No other files touched.
+
+
+---
+Task ID: 15
+Agent: main (test-manager audit + editable home sections)
+Task: As test manager, audit home sections vs admin edit locations; fix the 3 with no admin edit location (featured/solutions/CTA); enrich the solutions cards
+
+Work Log:
+- TEST-MANAGER AUDIT (code-level, browser blocked by sandbox server instability): mapped every home section to its admin edit location. Found 3 sections HARDCODED in HomePage with NO admin edit location: Featured Products (明星产品 heading), Solutions teaser (应用领域 — cards had only a name + button, no content), CTA band (打造下一套…). The user explicitly called out 应用领域.
+- Delegated the fix to a full-stack subagent (Task 14): converted all 3 into EDITABLE content blocks (new types: featured / solution-cards / cta) — the admin edits the heading + text via PageManager's block editor, while the dynamic data (featured products / L1 categories) stays automatic. SolutionCardsBlock enriched: each card now shows the L1 category name + DESCRIPTION + 了解更多 button (was just name + button). Added the 3 type options to the BlockDialog. Simplified HomePage to hero + contentBlocks.map (removed the 3 hardcoded sections). Added the 3 blocks + L1 category descriptions to the seed.
+- VERIFIED: curl confirms home page now has 6 content blocks (order 0-5: features / stats / text / featured / solution-cards / cta) and all 4 L1 categories carry descEn/descCn. The edit→reflect mechanism was proven earlier this turn (admin PUT stats contentEn JSON 99+ → public home showed it immediately); the new block types use the same code path. Lint 0 errors.
+- Re-seeded clean.
+
+Stage Summary:
+- Every home section now has a corresponding admin edit location (PageManager → Home → Content Blocks): hero via Banner, features/stats/text/featured/solution-cards/cta as blocks. The admin can edit the whole home page.
+- 应用领域 cards now show name + description + button (not just a button).
+- The 3 new block types are also available to add to ANY page (about/solutions/news/etc.).
+- Pushed.

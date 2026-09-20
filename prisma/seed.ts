@@ -168,6 +168,30 @@ async function main() {
       image: IMG.aboutWorkshop,
       order: 2,
     },
+    {
+      type: "featured",
+      titleEn: "Star Products",
+      titleCn: "明星产品",
+      contentEn: "Featured Products",
+      contentCn: "明星产品",
+      order: 3,
+    },
+    {
+      type: "solution-cards",
+      titleEn: "Where We Help",
+      titleCn: "应用领域",
+      contentEn: "Solutions",
+      contentCn: "解决方案",
+      order: 4,
+    },
+    {
+      type: "cta",
+      titleEn: "Let's build your next sound system.",
+      titleCn: "让我们一起打造下一套声音系统。",
+      contentEn: "Tell us about your venue, audience and budget — we'll propose the right system.",
+      contentCn: "告诉我们您的场馆、听众和预算，我们会为您推荐最合适的方案。",
+      order: 5,
+    },
   ];
   for (const b of homeBlocks) {
     await db.contentBlock.create({ data: { ...b, pageId: home.id } });
@@ -228,16 +252,44 @@ async function main() {
   // Categories (3 levels)
   // Level 1
   const catL1 = await db.category.create({
-    data: { nameEn: "Loudspeakers", nameCn: "扬声器", order: 0, icon: "speaker" },
+    data: {
+      nameEn: "Loudspeakers",
+      nameCn: "扬声器",
+      order: 0,
+      icon: "speaker",
+      descEn: "Professional loudspeakers for every venue and application.",
+      descCn: "为各类场馆与应用打造的专业扬声器。",
+    },
   });
   const catAmp = await db.category.create({
-    data: { nameEn: "Amplifiers", nameCn: "功放", order: 1, icon: "amp" },
+    data: {
+      nameEn: "Amplifiers",
+      nameCn: "功放",
+      order: 1,
+      icon: "amp",
+      descEn: "Touring-grade amplifiers with integrated DSP.",
+      descCn: "集成 DSP 的巡演级功放。",
+    },
   });
   const catMix = await db.category.create({
-    data: { nameEn: "Mixers & Processors", nameCn: "调音台与处理器", order: 2, icon: "mixer" },
+    data: {
+      nameEn: "Mixers & Processors",
+      nameCn: "调音台与处理器",
+      order: 2,
+      icon: "mixer",
+      descEn: "Digital mixers and signal processors.",
+      descCn: "数字调音台与信号处理器。",
+    },
   });
   const catWireless = await db.category.create({
-    data: { nameEn: "Wireless & Microphones", nameCn: "无线与话筒", order: 3, icon: "mic" },
+    data: {
+      nameEn: "Wireless & Microphones",
+      nameCn: "无线与话筒",
+      order: 3,
+      icon: "mic",
+      descEn: "Wireless systems and microphones.",
+      descCn: "无线系统与话筒。",
+    },
   });
 
   // Level 2 under Loudspeakers

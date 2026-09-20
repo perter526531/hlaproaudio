@@ -61,13 +61,24 @@ import { ImageUploader } from "./ImageUploader";
 import type { ContentBlock, ContentBlockType, SitePage } from "./types";
 import { cn } from "@/lib/utils";
 
-const BLOCK_TYPES: { value: ContentBlockType; labelEn: string; labelCn: string }[] = [
+// The admin can create blocks of types beyond the public ContentBlockType
+// union (featured / solution-cards / cta) — those values are stored as plain
+// strings in the DB and rendered by the public ContentBlock switch. Widen the
+// value field here so the Select can offer them without TS errors.
+const BLOCK_TYPES: {
+  value: ContentBlockType | "featured" | "solution-cards" | "cta";
+  labelEn: string;
+  labelCn: string;
+}[] = [
   { value: "text", labelEn: "Text", labelCn: "文本" },
   { value: "image", labelEn: "Image", labelCn: "图片" },
   { value: "hero", labelEn: "Hero", labelCn: "横幅" },
   { value: "features", labelEn: "Features", labelCn: "特性" },
   { value: "quote", labelEn: "Quote", labelCn: "引言" },
   { value: "stats", labelEn: "Stats", labelCn: "数据" },
+  { value: "featured", labelEn: "Featured Products", labelCn: "明星产品" },
+  { value: "solution-cards", labelEn: "Solution Cards", labelCn: "应用领域卡" },
+  { value: "cta", labelEn: "CTA Band", labelCn: "行动号召" },
 ];
 
 export function PageManager() {

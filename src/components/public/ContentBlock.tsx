@@ -1,8 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Award, Cpu, Globe2, Factory, Microscope, Headphones } from "lucide-react";
-import { useI18n } from "@/store/i18n";
+import {
+  Award,
+  Cpu,
+  Globe2,
+  Factory,
+  Microscope,
+  Headphones,
+  ChevronRight,
+  Mail,
+  ShoppingBag,
+} from "lucide-react";
+import { useI18n, tr } from "@/store/i18n";
+import { useNav } from "@/store/nav";
+import { useProducts, useCategories } from "@/components/public/hooks";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ProductCard } from "@/components/public/ProductCard";
 import { pick, type ContentBlock as ContentBlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +44,16 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
   const title = pick(block.titleEn, block.titleCn, lang);
   const content = pick(block.contentEn, block.contentCn, lang);
 
-  switch (block.type) {
+  // The DB stores block.type as a plain string; the admin can save blocks of
+  // types beyond the public BlockType union (featured / solution-cards / cta).
+  // Widen here so the switch can match those cases without TS narrowing errors.
+  const t = block.type as
+    | ContentBlockType["type"]
+    | "featured"
+    | "solution-cards"
+    | "cta";
+
+  switch (t) {
     case "hero":
       return <HeroBlock image={block.image} title={title} content={content} />;
     case "text":
@@ -42,6 +66,12 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
       return <StatsBlock title={title} contentEn={block.contentEn} />;
     case "quote":
       return <QuoteBlock content={content} title={title} />;
+    case "featured":
+      return <FeaturedBlock title={title} content={content} />;
+    case "solution-cards":
+      return <SolutionCardsBlock title={title} content={content} />;
+    case "cta":
+      return <CtaBlock title={title} content={content} />;
     default:
       return null;
   }
@@ -386,6 +416,185 @@ function QuoteBlock({
           <p className="mt-6 text-sm text-muted-foreground">— {title}</p>
         ) : null}
       </div>
+    </BlockWrapper>
+  );
+}
+
+/* ----------------------- Home-only dynamic blocks -----------------------
+ * These three blocks (featured / solution-cards / cta) used to be hardcoded
+ * directly in HomePage. They are now editable content blocks: the admin can
+ * edit their eyebrow / heading / paragraph via PageManager, while the dynamic
+ * data (featured products / L1 categories) stays automatic.
+ */
+
+function FeaturedBlock({
+  title,
+  content,
+}: {
+  title: string | null;
+  content: string | null;
+}) {
+  const lang = useI18n((s) => s.lang);
+  const go = useNav((s) => s.go);
+  const { data: featured, isLoading } = useProducts({
+    featured: true,
+    status: "listed",
+  });
+  const list = (featured ?? []).slice(0, 4);
+  return (
+    <BlockWrapper>
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          {content ? (
+            <p className="text-brand text-sm font-semibold tracking-wider uppercase mb-1">
+              {content}
+            </p>
+          ) : null}
+          {title ? (
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              {title}
+            </h2>
+          ) : null}
+        </div>
+        <button
+          onClick={() => go({ name: "products" })}
+          className="hidden sm:inline-flex items-center text-sm text-muted-foreground hover:text-brand transition-colors"
+        >
+          {tr("all_products", lang)}
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-[4/3] rounded-xl" />
+          ))}
+        </div>
+      ) : list.length ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          {list.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          {lang === "en" ? "No products yet." : "暂无产品。"}
+        </p>
+      )}
+    </BlockWrapper>
+  );
+}
+
+function SolutionCardsBlock({
+  title,
+  content,
+}: {
+  title: string | null;
+  content: string | null;
+}) {
+  const lang = useI18n((s) => s.lang);
+  const go = useNav((s) => s.go);
+  const { data: categories } = useCategories();
+  // The categories API returns a tree whose root array IS the L1 categories.
+  const top = (categories ?? []).slice(0, 4);
+  return (
+    <BlockWrapper className="bg-card/40 border-y border-border">
+      <div className="text-center mb-10">
+        {content ? (
+          <p className="text-brand text-sm font-semibold tracking-wider uppercase mb-1">
+            {content}
+          </p>
+        ) : null}
+        {title ? (
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            {title}
+          </h2>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {top.map((c, i) => {
+          const name = pick(c.nameEn, c.nameCn, lang) ?? "";
+          const desc = pick(c.descEn, c.descCn, lang) ?? "";
+          return (
+            <motion.button
+              key={c.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+              onClick={() => go({ name: "products", categoryId: c.id })}
+              className="group relative aspect-[4/5] sm:aspect-[3/4] rounded-xl overflow-hidden border border-border hover:border-brand transition-colors"
+            >
+              <div className="absolute inset-0 brand-gradient opacity-90" />
+              <div className="relative h-full p-4 sm:p-5 flex flex-col justify-end text-left">
+                <h3 className="text-base sm:text-lg font-semibold text-white">
+                  {name}
+                </h3>
+                {desc ? (
+                  <p className="mt-1 text-xs text-white/80 line-clamp-2">
+                    {desc}
+                  </p>
+                ) : null}
+                <span className="mt-2 inline-flex items-center text-xs text-white/90 group-hover:text-white">
+                  {tr("learn_more", lang)}
+                  <ChevronRight className="size-3" />
+                </span>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </BlockWrapper>
+  );
+}
+
+function CtaBlock({
+  title,
+  content,
+}: {
+  title: string | null;
+  content: string | null;
+}) {
+  const lang = useI18n((s) => s.lang);
+  const go = useNav((s) => s.go);
+  return (
+    <BlockWrapper className="py-16 md:py-24">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="max-w-5xl mx-auto text-center"
+      >
+        {title ? (
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+            {title}
+          </h2>
+        ) : null}
+        {content ? (
+          <p className="mt-4 text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
+            {content}
+          </p>
+        ) : null}
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Button
+            size="lg"
+            className="brand-gradient text-primary-foreground"
+            onClick={() => go({ name: "contact" })}
+          >
+            <Mail className="size-4" />
+            {tr("nav_contact", lang)}
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => go({ name: "products" })}
+          >
+            <ShoppingBag className="size-4" />
+            {tr("all_products", lang)}
+          </Button>
+        </div>
+      </motion.div>
     </BlockWrapper>
   );
 }
