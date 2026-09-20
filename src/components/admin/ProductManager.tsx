@@ -378,13 +378,12 @@ function ProductCard({
         <div className="line-clamp-1 text-xs text-muted-foreground">
           {lang === "cn" ? product.nameEn : product.nameCn}
         </div>
-        <div className="text-[11px] text-muted-foreground/80">
+        <div className="text-[11px] text-muted-foreground/80 truncate" title={cat?.path}>
           {cat ? (
-            <>
+            <span>
+              <span className="opacity-60">{lang === "cn" ? "分类路径：" : "Path: "}</span>
               {cat.path}
-              {" · "}
-              {lang === "cn" ? cat.nameCn : cat.nameEn}
-            </>
+            </span>
           ) : (
             <span className="text-destructive">—</span>
           )}
@@ -628,6 +627,11 @@ function ProductEditor({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  {lang === "cn"
+                    ? "建议选最末级（3 级）分类。产品会自动出现在其所有上级分类下（选 3 级 → 2 级、1 级也能看到）。"
+                    : "Pick the deepest (level-3) category. The product automatically shows under every ancestor too (level-3 → visible under level-2 & level-1)."}
+                </p>
               </FieldLabel>
               <FieldLabel label={lang === "cn" ? "排序" : "Order"}>
                 <Input
