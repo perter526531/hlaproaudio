@@ -55,3 +55,8 @@ server.log
 # agent tool scratch
 tool-results/
 /agent-ctx/
+
+# SQLite transaction/journal files (the main db/custom.db IS committed as starter data)
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm

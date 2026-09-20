@@ -372,3 +372,22 @@ Stage Summary:
 - User's question fully resolved: title, favicon, and logo are now ALL admin-editable via Settings → "品牌信息" card (site name En/Cn + logo image). The browser tab title, the favicon, and every brand mark on the site read from SiteSetting and update live on save.
 - Also fixed: lost upload route (CRITICAL), 5 public-page error states, Add/Delete page, submission status freshness, dashboard recent inquiries, N+1 query, keyboard a11y, image onError, settings empty-state, db log noise.
 - Verified: lint 0/0; PUT /api/settings (siteNameCn=测试品牌) → 200 + persisted; GET confirms; browser document.title = "首页 | AudioCenter 专业音响" (dynamic); Brand aria-label reads site name from settings.
+
+---
+Task ID: 10
+Agent: main (clone-and-run fix)
+Task: Fix "fresh clone has no content + can't login" — root cause + turnkey setup
+
+Work Log:
+- DIAGNOSED: .env had DATABASE_URL=file:/home/z/my-project/db/custom.db (an ABSOLUTE path to the dev sandbox). On any other machine that path doesn't exist → Prisma opens an empty/nonexistent DB → no pages/products + no admin user → "no content" + "wrong password".
+- FIXED .env → DATABASE_URL="file:./db/custom.db" (relative, resolves to the committed db at <root>/db/custom.db). Verified: API returns 6 pages, 4 L1 cats, 8 products; admin/admin123 login → 200.
+- Re-seeded db/custom.db clean (6 pages, 13 cats, 8 products, admin/admin123, 0 submissions) so the committed starter DB has fresh data.
+- package.json: added "postinstall": "prisma generate" (so bun/npm install auto-generates the Prisma Client — the generated client in node_modules is not committed), "seed": "bun run prisma/seed.ts", "setup": "prisma generate && prisma db push --accept-data-loss && bun run prisma/seed.ts" (one command to initialise a fresh DB).
+- .gitignore: ignore db/*.db-journal / *.db-wal / *.db-shm (SQLite transaction files); keep db/custom.db committed as starter data.
+- Wrote README.md with: 3-command quick start (bun install → bun run dev), admin credentials, setup/reset commands, content-customisation table, project layout.
+- Verified `bun run setup` runs end-to-end (generate → db push → seed).
+
+Stage Summary:
+- Clone-and-run now works on any machine: `bun install` (postinstall generates Prisma client) → `bun run dev` → site + admin work from the committed starter DB.
+- Fallback for empty/corrupt DB: `bun run setup` regenerates the client + schema + sample data in one command.
+- Root cause (absolute .env path) + missing client generation + missing seed/setup docs all addressed.
