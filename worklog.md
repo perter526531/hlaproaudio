@@ -515,3 +515,26 @@ Stage Summary:
 - 应用领域 cards now show name + description + button (not just a button).
 - The 3 new block types are also available to add to ANY page (about/solutions/news/etc.).
 - Pushed.
+
+---
+Task ID: 16
+Agent: full-stack-developer (news-list editable block)
+Task: Make the News page admin-editable via a new news-list content block
+Work Log:
+- Moved the hardcoded NEWS array from NewsPage.tsx into ContentBlock.tsx as `export const DEFAULT_NEWS: NewsItem[]` (same 3 items, same shape; added `export interface NewsItem`).
+- Added `case "news-list"` to ContentBlock's switch + a `NewsListBlock({ contentEn })` that parses contentEn JSON via `parseJsonArray`, falls back to DEFAULT_NEWS when null/empty, and renders the SAME card layout NewsPage used (image aspect-[16/9] + tag badge + CalendarDays date + line-clamp-2 title/excerpt), inside a `py-12 md:py-20` section with `max-w-7xl` container + `grid md:grid-cols-3`. Bilingual via `useI18n` + `pick`.
+- Refactored NewsPage.tsx to render BannerSection + the page's content blocks via `<ContentBlock>` (same pattern as other pages); shows a centered "No news yet / 暂无新闻" empty state when there are zero blocks. Removed the now-unused CalendarDays import; kept ArrowRight for the Contact button.
+- Added `{ value: "news-list", labelEn: "News List", labelCn: "新闻列表" }` to BLOCK_TYPES in PageManager.tsx (after `cta`); widened the value union.
+- Added `NewsListEditor` (modeled on StatsEditor/FeaturesEditor): repeatable rows with bilingual title Input / excerpt Textarea(small) / date Input / tag Input / cover `ImageUploader` (small `h-24 w-40` preview) per row; Add-row (+) and remove-row (trash) buttons; bilingual hint line.
+- Added `parseNewsRows(raw)` (falls back to DEFAULT_NEWS mapped to rows when empty/invalid — same "what you see is what you edit" rule) and `serializeNewsRows(rows)` (drops rows with both titles empty; returns "" if all empty); imported DEFAULT_NEWS + NewsItem from ContentBlock.
+- Wired NewsListEditor into BlockDialog: local `newsRows` state, init from `parseNewsRows(block?.contentEn)` in the existing init useEffect, re-init on type change to "news-list", and `updateNewsRow`/`addNewsRow`/`removeNewsRow` sync to `form.contentEn` on every change (same pattern as statsRows/featuresRows). `onSave` now nulls contentCn for news-list.
+- Updated prisma/seed.ts: added one `news-list` block (order 0) to the news page (which previously had no blocks) with the 3 sample news items serialized as JSON in contentEn.
+- Ran `bun run prisma/seed.ts` (seed OK) then `bun run lint` (exit 0, no errors). Dev server on port 3000 hot-recompiled cleanly.
+Stage Summary:
+- Files changed (4): src/components/public/ContentBlock.tsx, src/components/public/NewsPage.tsx, src/components/admin/PageManager.tsx, prisma/seed.ts.
+- Key decisions:
+  - Bilingual news payload stored entirely in `contentEn` JSON (same convention as stats/features blocks); `contentCn` is null for news-list.
+  - "What you see is what you edit" — parseNewsRows falls back to DEFAULT_NEWS mapped to rows so the admin opens the editor pre-populated with the public sample cards; the public NewsListBlock also falls back to DEFAULT_NEWS when contentEn is missing/empty/invalid (so a fresh install is never empty).
+  - NewsPage shows the "No news yet / 暂无新闻" empty state only when there are zero content blocks; a news-list block whose rows are all empty renders nothing (no empty cards).
+  - Reused the existing ImageUploader for cover images inside NewsListEditor — no new deps.
+- The last admin-editability gap on the site (the News page) is now closed: editing a news-list block in admin → news cards on the public News page reflect those edits.

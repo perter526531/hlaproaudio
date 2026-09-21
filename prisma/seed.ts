@@ -143,6 +143,21 @@ async function main() {
     },
   });
 
+  // News content blocks
+  const newsBlocks = [
+    {
+      type: "news-list",
+      titleEn: "Latest News",
+      titleCn: "最新动态",
+      contentEn:
+        '[{"titleEn":"AudioCenter Showcases New Line Array at Prolight+Sound 2024","titleCn":"AudioCenter 在 2024 法兰克福展发布全新线阵列","excerptEn":"The VA-12 line array drew crowds with its punchy, musical sound and fast rigging hardware.","excerptCn":"全新 VA-12 线阵列凭借饱满悦耳的声音与便捷挂件硬件吸引大量观众。","dateEn":"Apr 15, 2024","dateCn":"2024年4月15日","tagEn":"Event","tagCn":"活动","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/5614de08b729.jpg"},{"titleEn":"VA-12 Line Array Now Shipping Worldwide","titleCn":"VA-12 线阵列全球同步发售","excerptEn":"Touring-grade output, 24-cabinet array capability and refined voicing are now available globally.","excerptCn":"巡演级输出、24只阵列规模与精细调校，全球同步发售。","dateEn":"Feb 28, 2024","dateCn":"2024年2月28日","tagEn":"Product","tagCn":"新品","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/ab67df55ab17.jpg"},{"titleEn":"Stadium Project in Southeast Asia Completed","titleCn":"东南亚某体育馆扩声项目顺利完成","excerptEn":"A multi-zone line array + column speaker solution delivered even coverage across the bowl.","excerptCn":"线阵列+柱式扬声器多分区方案，为整个场馆提供均匀覆盖。","dateEn":"Jan 10, 2024","dateCn":"2024年1月10日","tagEn":"Case Study","tagCn":"案例","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/2e4e4b2e0ba0.jpg"}]',
+      order: 0,
+    },
+  ];
+  for (const b of newsBlocks) {
+    await db.contentBlock.create({ data: { ...b, pageId: news.id } });
+  }
+
   // Content blocks for home page
   // (The home hero is driven by the page banner fields above — no separate
   // "hero" block here, which would duplicate the banner image.)

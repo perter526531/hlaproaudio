@@ -60,14 +60,15 @@ import {
 import { ImageUploader } from "./ImageUploader";
 import type { ContentBlock, ContentBlockType, SitePage } from "./types";
 import { cn } from "@/lib/utils";
-import { STATS, DEFAULT_FEATURES } from "@/components/public/ContentBlock";
+import { STATS, DEFAULT_FEATURES, DEFAULT_NEWS, type NewsItem } from "@/components/public/ContentBlock";
 
 // The admin can create blocks of types beyond the public ContentBlockType
-// union (featured / solution-cards / cta) — those values are stored as plain
-// strings in the DB and rendered by the public ContentBlock switch. Widen the
-// value field here so the Select can offer them without TS errors.
+// union (featured / solution-cards / cta / news-list) — those values are
+// stored as plain strings in the DB and rendered by the public ContentBlock
+// switch. Widen the value field here so the Select can offer them without TS
+// errors.
 const BLOCK_TYPES: {
-  value: ContentBlockType | "featured" | "solution-cards" | "cta";
+  value: ContentBlockType | "featured" | "solution-cards" | "cta" | "news-list";
   labelEn: string;
   labelCn: string;
 }[] = [
@@ -80,6 +81,7 @@ const BLOCK_TYPES: {
   { value: "featured", labelEn: "Featured Products", labelCn: "明星产品" },
   { value: "solution-cards", labelEn: "Solution Cards", labelCn: "应用领域卡" },
   { value: "cta", labelEn: "CTA Band", labelCn: "行动号召" },
+  { value: "news-list", labelEn: "News List", labelCn: "新闻列表" },
 ];
 
 export function PageManager() {
@@ -573,7 +575,7 @@ function BlockRow({
   );
 }
 
-/* ----------------------- Structured content editors (stats / features) ----------------------- */
+/* ----------------------- Structured content editors (stats / features / news) ----------------------- */
 
 type StatsRow = { value: string; labelEn: string; labelCn: string };
 type FeaturesRow = {
@@ -582,12 +584,26 @@ type FeaturesRow = {
   descEn: string;
   descCn: string;
 };
+type NewsRow = NewsItem;
 
 function emptyStatsRow(): StatsRow {
   return { value: "", labelEn: "", labelCn: "" };
 }
 function emptyFeaturesRow(): FeaturesRow {
   return { titleEn: "", titleCn: "", descEn: "", descCn: "" };
+}
+function emptyNewsRow(): NewsRow {
+  return {
+    titleEn: "",
+    titleCn: "",
+    excerptEn: "",
+    excerptCn: "",
+    dateEn: "",
+    dateCn: "",
+    tagEn: "",
+    tagCn: "",
+    image: "",
+  };
 }
 
 /** Parse contentEn into a stats row list; falls back to the public defaults
@@ -678,6 +694,53 @@ function serializeStatsRows(rows: StatsRow[]): string {
 
 /** Serialize features rows to a JSON string, dropping rows with no title. */
 function serializeFeaturesRows(rows: FeaturesRow[]): string {
+  const cleaned = rows.filter(
+    (r) => r.titleEn.trim() !== "" || r.titleCn.trim() !== ""
+  );
+  return cleaned.length > 0 ? JSON.stringify(cleaned) : "";
+}
+
+/** Parse contentEn into a news row list; falls back to the public defaults
+ *  (DEFAULT_NEWS mapped to rows) so the admin sees (and can edit) exactly what
+ *  the public currently shows — same "what you see is what you edit" rule as
+ *  the stats / features editors. */
+function parseNewsRows(raw: string | null | undefined): NewsRow[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw ?? "");
+  } catch {
+    parsed = null;
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return DEFAULT_NEWS.map((n) => ({ ...n }));
+  }
+  const rows = parsed
+    .map((r): NewsRow => ({
+      titleEn:
+        r && typeof (r as NewsRow).titleEn === "string" ? (r as NewsRow).titleEn : "",
+      titleCn:
+        r && typeof (r as NewsRow).titleCn === "string" ? (r as NewsRow).titleCn : "",
+      excerptEn:
+        r && typeof (r as NewsRow).excerptEn === "string" ? (r as NewsRow).excerptEn : "",
+      excerptCn:
+        r && typeof (r as NewsRow).excerptCn === "string" ? (r as NewsRow).excerptCn : "",
+      dateEn:
+        r && typeof (r as NewsRow).dateEn === "string" ? (r as NewsRow).dateEn : "",
+      dateCn:
+        r && typeof (r as NewsRow).dateCn === "string" ? (r as NewsRow).dateCn : "",
+      tagEn:
+        r && typeof (r as NewsRow).tagEn === "string" ? (r as NewsRow).tagEn : "",
+      tagCn:
+        r && typeof (r as NewsRow).tagCn === "string" ? (r as NewsRow).tagCn : "",
+      image:
+        r && typeof (r as NewsRow).image === "string" ? (r as NewsRow).image : "",
+    }));
+  return rows.length > 0 ? rows : DEFAULT_NEWS.map((n) => ({ ...n }));
+}
+
+/** Serialize news rows to a JSON string, dropping rows with no title at all
+ *  (both titleEn AND titleCn empty). Returns "" if all rows are dropped. */
+function serializeNewsRows(rows: NewsRow[]): string {
   const cleaned = rows.filter(
     (r) => r.titleEn.trim() !== "" || r.titleCn.trim() !== ""
   );
@@ -831,6 +894,111 @@ function FeaturesEditor({
   );
 }
 
+function NewsListEditor({
+  rows,
+  onUpdate,
+  onAdd,
+  onRemove,
+}: {
+  rows: NewsRow[];
+  onUpdate: (i: number, field: keyof NewsRow, value: string) => void;
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+}) {
+  const lang = useI18n((s) => s.lang);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          {lang === "cn" ? "新闻条目" : "News Items"}
+        </Label>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="size-3.5" />
+          {lang === "cn" ? "添加" : "Add"}
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {lang === "cn"
+          ? "每条包含双语标题 / 摘要 / 日期 / 标签与封面图；前台按卡片样式渲染。标题都为空的行保存时会被忽略。"
+          : "Each row has bilingual title / excerpt / date / tag and a cover image; the public site renders them as cards. Rows with no title at all are dropped on save."}
+      </p>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border/60 bg-muted/30 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-2">
+                <Input
+                  placeholder={lang === "cn" ? "标题 (EN)" : "Title (EN)"}
+                  value={row.titleEn}
+                  onChange={(e) => onUpdate(i, "titleEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "标题 (中文)" : "Title (中文)"}
+                  value={row.titleCn}
+                  onChange={(e) => onUpdate(i, "titleCn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "摘要 (EN)" : "Excerpt (EN)"}
+                  value={row.excerptEn}
+                  onChange={(e) => onUpdate(i, "excerptEn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "摘要 (中文)" : "Excerpt (中文)"}
+                  value={row.excerptCn}
+                  onChange={(e) => onUpdate(i, "excerptCn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "日期 (EN)" : "Date (EN)"}
+                  value={row.dateEn}
+                  onChange={(e) => onUpdate(i, "dateEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "日期 (中文)" : "Date (中文)"}
+                  value={row.dateCn}
+                  onChange={(e) => onUpdate(i, "dateCn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "标签 (EN)" : "Tag (EN)"}
+                  value={row.tagEn}
+                  onChange={(e) => onUpdate(i, "tagEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "标签 (中文)" : "Tag (中文)"}
+                  value={row.tagCn}
+                  onChange={(e) => onUpdate(i, "tagCn", e.target.value)}
+                />
+                <div className="md:col-span-2">
+                  <ImageUploader
+                    label={lang === "cn" ? "封面图" : "Cover Image"}
+                    value={row.image}
+                    onChange={(url) => onUpdate(i, "image", url)}
+                    previewClassName="h-24 w-40"
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onRemove(i)}
+                title={lang === "cn" ? "删除" : "Remove"}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------- Block dialog (add/edit) ----------------------- */
 
 function BlockDialog({
@@ -869,10 +1037,16 @@ function BlockDialog({
     emptyFeaturesRow(),
     emptyFeaturesRow(),
   ]);
+  const [newsRows, setNewsRows] = React.useState<NewsRow[]>(() => [
+    emptyNewsRow(),
+    emptyNewsRow(),
+    emptyNewsRow(),
+  ]);
 
   // Initialize form + structured rows when the dialog opens (or the block prop
   // changes after a refetch). Rows are re-derived from the saved contentEn
-  // JSON so an existing stats / features block loads its items correctly.
+  // JSON so an existing stats / features / news-list block loads its items
+  // correctly.
   React.useEffect(() => {
     if (!open) return;
     const nextForm = {
@@ -888,6 +1062,8 @@ function BlockDialog({
     if (nextForm.type === "stats") setStatsRows(parseStatsRows(nextForm.contentEn));
     else if (nextForm.type === "features")
       setFeaturesRows(parseFeaturesRows(nextForm.contentEn));
+    else if (nextForm.type === "news-list")
+      setNewsRows(parseNewsRows(nextForm.contentEn));
   }, [open, block]);
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -904,6 +1080,8 @@ function BlockDialog({
     if (nextType === "stats") setStatsRows(parseStatsRows(form.contentEn));
     else if (nextType === "features")
       setFeaturesRows(parseFeaturesRows(form.contentEn));
+    else if (nextType === "news-list")
+      setNewsRows(parseNewsRows(form.contentEn));
   }
 
   function updateStatsRow(i: number, field: keyof StatsRow, value: string) {
@@ -942,11 +1120,30 @@ function BlockDialog({
     setForm((f) => ({ ...f, contentEn: serializeFeaturesRows(next) }));
   }
 
+  function updateNewsRow(i: number, field: keyof NewsRow, value: string) {
+    const next = newsRows.map((r, idx) =>
+      idx === i ? { ...r, [field]: value } : r
+    );
+    setNewsRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeNewsRows(next) }));
+  }
+  function addNewsRow() {
+    setNewsRows((prev) => [...prev, emptyNewsRow()]);
+  }
+  function removeNewsRow(i: number) {
+    const next = newsRows.filter((_, idx) => idx !== i);
+    setNewsRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeNewsRows(next) }));
+  }
+
   async function onSave() {
-    // For stats / features, all bilingual data lives inside contentEn JSON;
-    // contentCn is unused — clear it so no stale text lingers when a block is
-    // switched from text/hero/etc. into a structured type.
-    const isStructured = form.type === "stats" || form.type === "features";
+    // For stats / features / news-list, all bilingual data lives inside
+    // contentEn JSON; contentCn is unused — clear it so no stale text lingers
+    // when a block is switched from text/hero/etc. into a structured type.
+    const isStructured =
+      form.type === "stats" ||
+      form.type === "features" ||
+      form.type === "news-list";
     const data = {
       type: form.type,
       titleEn: form.titleEn || null,
@@ -1044,6 +1241,13 @@ function BlockDialog({
               onUpdate={updateFeaturesRow}
               onAdd={addFeaturesRow}
               onRemove={removeFeaturesRow}
+            />
+          ) : form.type === "news-list" ? (
+            <NewsListEditor
+              rows={newsRows}
+              onUpdate={updateNewsRow}
+              onAdd={addNewsRow}
+              onRemove={removeNewsRow}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

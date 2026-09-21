@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Mail,
   ShoppingBag,
+  CalendarDays,
 } from "lucide-react";
 import { useI18n, tr } from "@/store/i18n";
 import { useNav } from "@/store/nav";
@@ -45,13 +46,15 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
   const content = pick(block.contentEn, block.contentCn, lang);
 
   // The DB stores block.type as a plain string; the admin can save blocks of
-  // types beyond the public BlockType union (featured / solution-cards / cta).
-  // Widen here so the switch can match those cases without TS narrowing errors.
+  // types beyond the public BlockType union (featured / solution-cards / cta /
+  // news-list). Widen here so the switch can match those cases without TS
+  // narrowing errors.
   const t = block.type as
     | ContentBlockType["type"]
     | "featured"
     | "solution-cards"
-    | "cta";
+    | "cta"
+    | "news-list";
 
   switch (t) {
     case "hero":
@@ -72,6 +75,8 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
       return <SolutionCardsBlock title={title} content={content} />;
     case "cta":
       return <CtaBlock title={title} content={content} />;
+    case "news-list":
+      return <NewsListBlock contentEn={block.contentEn} />;
     default:
       return null;
   }
@@ -596,5 +601,162 @@ function CtaBlock({
         </div>
       </motion.div>
     </BlockWrapper>
+  );
+}
+
+/* ----------------------- News list block -----------------------
+ * News cards rendered from a structured bilingual JSON payload in
+ * `contentEn` (each row: titleEn/titleCn, excerptEn/excerptCn, dateEn/dateCn,
+ * tagEn/tagCn, image). Used by the News page so its cards become admin
+ * editable. Falls back to DEFAULT_NEWS (the original sample cards) when
+ * `contentEn` is missing / unparseable / empty so a fresh install isn't empty.
+ */
+
+export interface NewsItem {
+  titleEn: string;
+  titleCn: string;
+  excerptEn: string;
+  excerptCn: string;
+  dateEn: string;
+  dateCn: string;
+  tagEn: string;
+  tagCn: string;
+  image: string;
+}
+
+export const DEFAULT_NEWS: NewsItem[] = [
+  {
+    titleEn: "AudioCenter Showcases New Line Array at Prolight+Sound 2024",
+    titleCn: "AudioCenter 在 2024 法兰克福展发布全新线阵列",
+    excerptEn:
+      "The VA-12 line array drew crowds with its punchy, musical sound and fast rigging hardware.",
+    excerptCn:
+      "全新 VA-12 线阵列凭借饱满悦耳的声音与便捷挂件硬件吸引大量观众。",
+    dateEn: "Apr 15, 2024",
+    dateCn: "2024年4月15日",
+    tagEn: "Event",
+    tagCn: "活动",
+    image:
+      "https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/5614de08b729.jpg",
+  },
+  {
+    titleEn: "VA-12 Line Array Now Shipping Worldwide",
+    titleCn: "VA-12 线阵列全球同步发售",
+    excerptEn:
+      "Touring-grade output, 24-cabinet array capability and refined voicing are now available globally.",
+    excerptCn:
+      "巡演级输出、24只阵列规模与精细调校，全球同步发售。",
+    dateEn: "Feb 28, 2024",
+    dateCn: "2024年2月28日",
+    tagEn: "Product",
+    tagCn: "新品",
+    image:
+      "https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/ab67df55ab17.jpg",
+  },
+  {
+    titleEn: "Stadium Project in Southeast Asia Completed",
+    titleCn: "东南亚某体育馆扩声项目顺利完成",
+    excerptEn:
+      "A multi-zone line array + column speaker solution delivered even coverage across the bowl.",
+    excerptCn:
+      "线阵列+柱式扬声器多分区方案，为整个场馆提供均匀覆盖。",
+    dateEn: "Jan 10, 2024",
+    dateCn: "2024年1月10日",
+    tagEn: "Case Study",
+    tagCn: "案例",
+    image:
+      "https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/2e4e4b2e0ba0.jpg",
+  },
+];
+
+function NewsListBlock({ contentEn }: { contentEn: string | null }) {
+  const lang = useI18n((s) => s.lang);
+  // Parse contentEn as a JSON array of NewsItem. If parsing fails OR the array
+  // is empty, fall back to DEFAULT_NEWS so the public site never breaks.
+  const parsed = parseJsonArray<{
+    titleEn?: string;
+    titleCn?: string;
+    excerptEn?: string;
+    excerptCn?: string;
+    dateEn?: string;
+    dateCn?: string;
+    tagEn?: string;
+    tagCn?: string;
+    image?: string;
+  }>(contentEn);
+  let news: NewsItem[] = DEFAULT_NEWS;
+  if (parsed && parsed.length > 0) {
+    news = parsed.map((n) => ({
+      titleEn: typeof n.titleEn === "string" ? n.titleEn : "",
+      titleCn: typeof n.titleCn === "string" ? n.titleCn : "",
+      excerptEn: typeof n.excerptEn === "string" ? n.excerptEn : "",
+      excerptCn: typeof n.excerptCn === "string" ? n.excerptCn : "",
+      dateEn: typeof n.dateEn === "string" ? n.dateEn : "",
+      dateCn: typeof n.dateCn === "string" ? n.dateCn : "",
+      tagEn: typeof n.tagEn === "string" ? n.tagEn : "",
+      tagCn: typeof n.tagCn === "string" ? n.tagCn : "",
+      image: typeof n.image === "string" ? n.image : "",
+    }));
+  }
+  return (
+    <section className="py-12 md:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+          {news.map((n, i) => {
+            const title = pick(n.titleEn, n.titleCn, lang) ?? "";
+            const excerpt = pick(n.excerptEn, n.excerptCn, lang) ?? "";
+            const date = pick(n.dateEn, n.dateCn, lang) ?? "";
+            const tag = pick(n.tagEn, n.tagCn, lang) ?? "";
+            return (
+              <motion.article
+                key={i}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className="group rounded-xl border border-border bg-card overflow-hidden hover:border-brand transition-colors"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+                  {n.image ? (
+                    <img
+                      src={n.image}
+                      alt={title}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.style.opacity = "0";
+                      }}
+                    />
+                  ) : null}
+                  {tag ? (
+                    <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-brand text-primary-foreground text-xs font-semibold px-2.5 py-1">
+                      {tag}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="p-5">
+                  {date ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CalendarDays className="size-3.5" />
+                      {date}
+                    </div>
+                  ) : null}
+                  {title ? (
+                    <h3 className="mt-3 text-lg font-semibold leading-snug line-clamp-2">
+                      {title}
+                    </h3>
+                  ) : null}
+                  {excerpt ? (
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                      {excerpt}
+                    </p>
+                  ) : null}
+                </div>
+              </motion.article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
