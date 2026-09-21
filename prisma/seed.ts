@@ -233,6 +233,15 @@ async function main() {
       contentCn: "",
       order: 3,
     },
+    {
+      type: "cta",
+      titleEn: "Work with us.",
+      titleCn: "与我们合作。",
+      contentEn:
+        "From rental houses to integrators, we partner with professionals worldwide.",
+      contentCn: "从租赁公司到集成商，我们与全球专业人士建立合作关系。",
+      order: 4,
+    },
   ];
   for (const b of aboutBlocks) {
     await db.contentBlock.create({ data: { ...b, pageId: about.id } });
@@ -244,6 +253,7 @@ async function main() {
     { type: "text", titleEn: "Fixed Installation", titleCn: "固定安装", contentEn: "Architectural loudspeakers and steerable column arrays for auditoriums, transport hubs and corporate spaces.", contentCn: "适用于礼堂、交通枢纽与企业空间的建筑化扬声器与可指向柱式阵列。", image: IMG.solution2, order: 1 },
     { type: "text", titleEn: "Houses of Worship", titleCn: "宗教场所", contentEn: "Speech-intelligible, music-warm systems designed to respect the architecture and the message.", contentCn: "兼顾语言清晰与音乐温暖，尊重建筑空间与表达内容的专业音响系统。", image: IMG.solution3, order: 2 },
     { type: "text", titleEn: "Sports & Education", titleCn: "体育与教育", contentEn: "Weather-resistant systems and campus-wide paging tuned for clarity and durability.", contentCn: "耐候型扬声器与校园级广播系统，清晰、耐用、易维护。", image: IMG.solution4, order: 3 },
+    { type: "cta", titleEn: "Have a specific venue in mind?", titleCn: "有具体的场馆场景？", contentEn: "Our application engineers can help design the right system.", contentCn: "我们的应用工程师可协助设计最合适的系统。", order: 4 },
   ];
   for (const b of solBlocks) {
     await db.contentBlock.create({ data: { ...b, pageId: solutions.id } });

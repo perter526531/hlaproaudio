@@ -97,41 +97,6 @@ export function AboutPage() {
         }
         return <ContentBlock key={b.id} block={b} />;
       })}
-
-      {/* Bottom CTA */}
-      <section className="py-16 md:py-24 border-t border-border bg-card/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            {lang === "en" ? (
-              <>Work with us.</>
-            ) : (
-              <>与我们合作。</>
-            )}
-          </h2>
-          <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            {lang === "en"
-              ? "From rental houses to integrators, we partner with professionals worldwide."
-              : "从租赁公司到集成商，我们与全球专业人士建立合作关系。"}
-          </p>
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Button
-              size="lg"
-              className="brand-gradient text-primary-foreground"
-              onClick={() => go({ name: "contact" })}
-            >
-              <Mail className="size-4" />
-              {tr("nav_contact", lang)}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => go({ name: "products" })}
-            >
-              {tr("all_products", lang)}
-            </Button>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

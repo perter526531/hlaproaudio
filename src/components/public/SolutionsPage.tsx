@@ -141,30 +141,6 @@ export function SolutionsPage() {
           })}
         </div>
       </section>
-
-      {/* CTA */}
-      <section className="py-16 md:py-24 border-t border-border bg-card/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            {lang === "en" ? "Have a specific venue in mind?" : "有具体的场馆场景？"}
-          </h2>
-          <p className="mt-3 text-muted-foreground text-base md:text-lg">
-            {lang === "en"
-              ? "Our application engineers can help design the right system."
-              : "我们的应用工程师可协助设计最合适的系统。"}
-          </p>
-          <div className="mt-7">
-            <Button
-              size="lg"
-              className="brand-gradient text-primary-foreground"
-              onClick={() => go({ name: "contact" })}
-            >
-              <Mail className="size-4" />
-              {tr("nav_contact", lang)}
-            </Button>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

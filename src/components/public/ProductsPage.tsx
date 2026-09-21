@@ -155,7 +155,7 @@ export function ProductsPage({ categoryId }: ProductsPageProps) {
             <div>
               <div className="flex items-end justify-between mb-5">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  {activeName ?? tr("product_center", lang)}
+                  {activeName ?? pick(page?.titleEn, page?.titleCn, lang) ?? tr("product_center", lang)}
                 </h1>
                 <span className="text-sm text-muted-foreground">
                   {productsLoading
