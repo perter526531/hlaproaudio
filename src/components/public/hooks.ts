@@ -9,8 +9,14 @@ import type {
 } from "@/lib/types";
 
 // ---------- Generic fetch helper ----------
+// `cache: "no-store"` prevents the browser from HTTP-caching GET responses,
+// so admin edits (new blocks, banner changes, etc.) always show on the
+// public site instead of a stale heuristically-cached response.
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`Request failed: ${res.status} ${url}`);
   return (await res.json()) as T;
 }

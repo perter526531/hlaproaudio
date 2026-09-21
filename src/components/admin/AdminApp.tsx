@@ -6,6 +6,7 @@ import { useNav } from "@/store/nav";
 import { useI18n } from "@/store/i18n";
 import { useLogout, useMe } from "./hooks";
 import { useSettingsAdmin } from "./hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { pick } from "@/lib/types";
 import { AdminLogin } from "./AdminLogin";
 import {
@@ -25,6 +26,7 @@ export function AdminApp() {
   const logout = useLogout();
   const lang = useI18n((s) => s.lang);
   const { data: settings } = useSettingsAdmin();
+  const qc = useQueryClient();
 
   const [active, setActive] = React.useState<AdminSection>("dashboard");
 
@@ -53,6 +55,15 @@ export function AdminApp() {
   }, [lang, settings]);
 
   function onViewSite() {
+    // Invalidate the public-facing queries so the public site always shows
+    // the latest admin edits (banner, content blocks, products, settings)
+    // immediately on remount — covers any edge case where a mutation's own
+    // invalidation didn't propagate.
+    qc.invalidateQueries({ queryKey: ["pages"] });
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["product"] });
+    qc.invalidateQueries({ queryKey: ["categories"] });
+    qc.invalidateQueries({ queryKey: ["settings"] });
     setAdminMode(false);
   }
 

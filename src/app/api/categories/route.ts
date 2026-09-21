@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       descEn: body.descEn || null,
       descCn: body.descCn || null,
       icon: body.icon || null,
+      image: body.image || null,
       order: body.order ?? 0,
     },
   });

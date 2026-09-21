@@ -67,6 +67,8 @@ model Category {
   descEn    String?
   descCn    String?
   icon      String?
+  /// Optional category image (used e.g. on the home "application areas" cards).
+  image     String?
   order     Int      @default(0)
   products  Product[]
   createdAt DateTime @default(now())

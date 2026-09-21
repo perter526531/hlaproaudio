@@ -38,6 +38,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       ...(body.descEn !== undefined && { descEn: body.descEn }),
       ...(body.descCn !== undefined && { descCn: body.descCn }),
       ...(body.icon !== undefined && { icon: body.icon }),
+      ...(body.image !== undefined && { image: body.image }),
       ...(body.order !== undefined && { order: body.order }),
     },
   });

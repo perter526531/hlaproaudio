@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useI18n, tr } from "@/store/i18n";
+import { ImageUploader } from "./ImageUploader";
 import {
   useCategoriesAdmin,
   useCreateCategory,
@@ -318,6 +319,7 @@ function CategoryDialog({
     descEn: "",
     descCn: "",
     icon: "",
+    image: "",
     order: 0,
   });
 
@@ -329,6 +331,7 @@ function CategoryDialog({
         descEn: initial?.descEn ?? "",
         descCn: initial?.descCn ?? "",
         icon: initial?.icon ?? "",
+        image: initial?.image ?? "",
         order: initial?.order ?? 0,
       });
     }
@@ -356,6 +359,7 @@ function CategoryDialog({
         descEn: form.descEn || null,
         descCn: form.descCn || null,
         icon: form.icon || null,
+        image: form.image || null,
         order: Number(form.order) || 0,
       };
       if (mode === "create" && parentId) {
@@ -429,6 +433,14 @@ function CategoryDialog({
                 value={form.icon}
                 onChange={(e) => setField("icon", e.target.value)}
                 placeholder="e.g. speakers"
+              />
+            </FieldLabel>
+            <FieldLabel label={`${lang === "cn" ? "分类图片" : "Category Image"}`}>
+              <ImageUploader
+                value={form.image}
+                onChange={(v) => setField("image", v)}
+                previewClassName="h-24 w-24"
+                hint={lang === "cn" ? "用于首页「应用领域」等卡片背景" : "Used as card background on the home page"}
               />
             </FieldLabel>
             <FieldLabel label={`${lang === "cn" ? "排序" : "Order"}`}>

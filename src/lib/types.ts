@@ -51,6 +51,7 @@ export interface Category {
   descEn: string | null;
   descCn: string | null;
   icon: string | null;
+  image: string | null;
   order: number;
   children: Category[];
   createdAt: string;

@@ -520,6 +520,7 @@ function SolutionCardsBlock({
         {top.map((c, i) => {
           const name = pick(c.nameEn, c.nameCn, lang) ?? "";
           const desc = pick(c.descEn, c.descCn, lang) ?? "";
+          const img = c.image;
           return (
             <motion.button
               key={c.id}
@@ -530,7 +531,24 @@ function SolutionCardsBlock({
               onClick={() => go({ name: "products", categoryId: c.id })}
               className="group relative aspect-[4/5] sm:aspect-[3/4] rounded-xl overflow-hidden border border-border hover:border-brand transition-colors"
             >
-              <div className="absolute inset-0 brand-gradient opacity-90" />
+              {img ? (
+                <>
+                  <img
+                    src={img}
+                    alt={name}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      e.currentTarget.style.opacity = "0";
+                    }}
+                  />
+                  {/* dark scrim so white text stays legible over the photo */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+                </>
+              ) : (
+                /* no image: keep the brand red card */
+                <div className="absolute inset-0 brand-gradient opacity-90" />
+              )}
               <div className="relative h-full p-4 sm:p-5 flex flex-col justify-end text-left">
                 <h3 className="text-base sm:text-lg font-semibold text-white">
                   {name}

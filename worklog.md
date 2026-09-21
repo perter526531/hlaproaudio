@@ -538,3 +538,20 @@ Stage Summary:
   - NewsPage shows the "No news yet / 暂无新闻" empty state only when there are zero content blocks; a news-list block whose rows are all empty renders nothing (no empty cards).
   - Reused the existing ImageUploader for cover images inside NewsListEditor — no new deps.
 - The last admin-editability gap on the site (the News page) is now closed: editing a news-list block in admin → news cards on the public News page reflect those edits.
+
+---
+Task ID: 17
+Agent: main (bug fix: new block not showing + application area card images)
+Task: Fix the "admin adds a content block but the public page doesn't show it" bug; enrich the home application-area cards with images
+
+Work Log:
+- BUG (new block doesn't show on public): root cause = the public fetchJson had no cache control, so the browser HTTP-cached GET /api/pages heuristically and served stale data (without the newly-added block) even after the TanStack invalidation. Fixed by adding `cache: "no-store"` to the public fetchJson (src/components/public/hooks.ts). Added a safety net in AdminApp.onViewSite: invalidate the public-facing query keys (pages/products/product/categories/settings) when switching admin->public, so the public always refetches fresh data on remount.
+- Verified the data flow: POST /api/pages/:id/blocks -> 200, block count 6->7, new block present in the response (the cache: no-store + invalidation now guarantees the public renders it).
+- APPLICATION-AREA CARD IMAGES: added an `image` field to Category (schema + lib/types + admin/types + categories POST/PUT API). SolutionCardsBlock now renders the category image as the card background (with a dark scrim so white text stays legible) + name + description + Learn-more; falls back to the brand red card when no image. CategoryManager CategoryDialog got an ImageUploader for the category image. Seeded images for the 4 L1 categories (Loudspeakers->line array, Amplifiers->amplifier, Mixers->mixer, Wireless->wireless).
+- Verified: all 4 L1 categories carry image=True + desc=True; lint 0 errors; re-seeded clean.
+
+Stage Summary:
+- "New content block doesn't show on public" bug fixed (cache: no-store + admin->public invalidation).
+- Home application-area cards now show image + name + description + button (was name + button only).
+- Category image is admin-editable (CategoryManager -> Category Image uploader).
+- Pushed.

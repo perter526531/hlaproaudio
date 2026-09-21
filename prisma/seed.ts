@@ -283,6 +283,7 @@ async function main() {
       icon: "speaker",
       descEn: "Professional loudspeakers for every venue and application.",
       descCn: "为各类场馆与应用打造的专业扬声器。",
+      image: IMG.prodLineArray,
     },
   });
   const catAmp = await db.category.create({
@@ -293,6 +294,7 @@ async function main() {
       icon: "amp",
       descEn: "Touring-grade amplifiers with integrated DSP.",
       descCn: "集成 DSP 的巡演级功放。",
+      image: IMG.prodAmplifier,
     },
   });
   const catMix = await db.category.create({
@@ -303,6 +305,7 @@ async function main() {
       icon: "mixer",
       descEn: "Digital mixers and signal processors.",
       descCn: "数字调音台与信号处理器。",
+      image: IMG.prodMixer,
     },
   });
   const catWireless = await db.category.create({
@@ -313,6 +316,7 @@ async function main() {
       icon: "mic",
       descEn: "Wireless systems and microphones.",
       descCn: "无线系统与话筒。",
+      image: IMG.prodWireless,
     },
   });
 
