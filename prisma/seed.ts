@@ -218,7 +218,7 @@ async function main() {
       order: 1,
     },
     {
-      type: "features",
+      type: "text",
       titleEn: "What We Believe",
       titleCn: "我们的信念",
       contentEn: "Sound should be honest, musical and powerful — never harsh.",
@@ -229,8 +229,7 @@ async function main() {
       type: "stats",
       titleEn: "Milestones",
       titleCn: "发展历程",
-      contentEn: "",
-      contentCn: "",
+      contentEn: '[{"value":"2003","labelEn":"Founded","labelCn":"创立"},{"value":"20+","labelEn":"Years of Innovation","labelCn":"年声学创新"},{"value":"80+","labelEn":"Countries Served","labelCn":"服务国家"},{"value":"30,000m²","labelEn":"Manufacturing Base","labelCn":"生产基地"}]',
       order: 3,
     },
     {

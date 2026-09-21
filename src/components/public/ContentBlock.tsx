@@ -246,7 +246,7 @@ interface Feature {
   descCn: string;
 }
 
-const DEFAULT_FEATURES: Feature[] = [
+export const DEFAULT_FEATURES: Feature[] = [
   {
     icon: <Microscope className="size-7" />,
     titleEn: "R&D Innovation",
@@ -331,7 +331,7 @@ function FeaturesBlock({
   );
 }
 
-const STATS: { value: string; labelEn: string; labelCn: string }[] = [
+export const STATS: { value: string; labelEn: string; labelCn: string }[] = [
   { value: "20+", labelEn: "Years of Innovation", labelCn: "年声学创新" },
   { value: "80+", labelEn: "Countries Served", labelCn: "服务国家" },
   { value: "50+", labelEn: "R&D Engineers", labelCn: "研发工程师" },

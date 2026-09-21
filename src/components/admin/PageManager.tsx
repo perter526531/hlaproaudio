@@ -60,6 +60,7 @@ import {
 import { ImageUploader } from "./ImageUploader";
 import type { ContentBlock, ContentBlockType, SitePage } from "./types";
 import { cn } from "@/lib/utils";
+import { STATS, DEFAULT_FEATURES } from "@/components/public/ContentBlock";
 
 // The admin can create blocks of types beyond the public ContentBlockType
 // union (featured / solution-cards / cta) — those values are stored as plain
@@ -589,7 +590,8 @@ function emptyFeaturesRow(): FeaturesRow {
   return { titleEn: "", titleCn: "", descEn: "", descCn: "" };
 }
 
-/** Parse contentEn into a stats row list; falls back to 4 empty rows. */
+/** Parse contentEn into a stats row list; falls back to the public defaults
+ *  so the admin sees (and can edit) exactly what the public currently shows. */
 function parseStatsRows(raw: string | null | undefined): StatsRow[] {
   let parsed: unknown = null;
   try {
@@ -598,7 +600,11 @@ function parseStatsRows(raw: string | null | undefined): StatsRow[] {
     parsed = null;
   }
   if (!Array.isArray(parsed) || parsed.length === 0) {
-    return [emptyStatsRow(), emptyStatsRow(), emptyStatsRow(), emptyStatsRow()];
+    return STATS.map((s) => ({
+      value: s.value,
+      labelEn: s.labelEn,
+      labelCn: s.labelCn,
+    }));
   }
   const rows = parsed
     .map((r): StatsRow => ({
@@ -612,10 +618,11 @@ function parseStatsRows(raw: string | null | undefined): StatsRow[] {
     .slice(0, 6);
   return rows.length > 0
     ? rows
-    : [emptyStatsRow(), emptyStatsRow(), emptyStatsRow(), emptyStatsRow()];
+    : STATS.map((s) => ({ value: s.value, labelEn: s.labelEn, labelCn: s.labelCn }));
 }
 
-/** Parse contentEn into a features row list; falls back to 3 empty rows. */
+/** Parse contentEn into a features row list; falls back to the public defaults
+ *  so the admin sees (and can edit) exactly what the public currently shows. */
 function parseFeaturesRows(raw: string | null | undefined): FeaturesRow[] {
   let parsed: unknown = null;
   try {
@@ -624,7 +631,12 @@ function parseFeaturesRows(raw: string | null | undefined): FeaturesRow[] {
     parsed = null;
   }
   if (!Array.isArray(parsed) || parsed.length === 0) {
-    return [emptyFeaturesRow(), emptyFeaturesRow(), emptyFeaturesRow()];
+    return DEFAULT_FEATURES.map((f) => ({
+      titleEn: f.titleEn,
+      titleCn: f.titleCn,
+      descEn: f.descEn,
+      descCn: f.descCn,
+    }));
   }
   const rows = parsed
     .map((r): FeaturesRow => ({
@@ -648,7 +660,12 @@ function parseFeaturesRows(raw: string | null | undefined): FeaturesRow[] {
     .slice(0, 6);
   return rows.length > 0
     ? rows
-    : [emptyFeaturesRow(), emptyFeaturesRow(), emptyFeaturesRow()];
+    : DEFAULT_FEATURES.map((f) => ({
+        titleEn: f.titleEn,
+        titleCn: f.titleCn,
+        descEn: f.descEn,
+        descCn: f.descCn,
+      }));
 }
 
 /** Serialize stats rows to a JSON string, dropping rows with empty value. */
