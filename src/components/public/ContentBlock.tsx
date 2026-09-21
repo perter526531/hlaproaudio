@@ -72,7 +72,7 @@ export function ContentBlock({ block }: { block: ContentBlockType }) {
     case "featured":
       return <FeaturedBlock title={title} content={content} />;
     case "solution-cards":
-      return <SolutionCardsBlock title={title} content={content} />;
+      return <SolutionCardsBlock title={title} contentEn={block.contentEn} />;
     case "cta":
       return <CtaBlock title={title} content={content} />;
     case "news-list":
@@ -490,26 +490,74 @@ function FeaturedBlock({
   );
 }
 
+/* ----------------------- Home "应用领域" / Solution cards -----------------------
+ * Self-contained card block: the 4 cards (name + desc + image, bilingual)
+ * live in the block's `contentEn` as a JSON array, fully editable in the
+ * PageManager. An optional `linkCategoryId` per card keeps the click-through
+ * to a category's product list. If `contentEn` is null/empty/invalid (e.g. an
+ * older block), it falls back to AUTO-PULLING the L1 categories so a fresh
+ * install or a never-edited block still shows cards.
+ */
+interface SolutionCard {
+  nameEn: string;
+  nameCn: string;
+  descEn: string;
+  descCn: string;
+  image: string;
+  linkCategoryId?: string | null;
+}
+
 function SolutionCardsBlock({
   title,
-  content,
+  contentEn,
 }: {
   title: string | null;
-  content: string | null;
+  contentEn: string | null;
 }) {
   const lang = useI18n((s) => s.lang);
   const go = useNav((s) => s.go);
   const { data: categories } = useCategories();
-  // The categories API returns a tree whose root array IS the L1 categories.
-  const top = (categories ?? []).slice(0, 4);
+
+  // Parse contentEn as a JSON array of SolutionCard. If parsing fails OR the
+  // array is empty, fall back to AUTO-PULLING the L1 categories so the public
+  // site never breaks and an unedited block keeps its cards.
+  const parsed = parseJsonArray<{
+    nameEn?: string;
+    nameCn?: string;
+    descEn?: string;
+    descCn?: string;
+    image?: string;
+    linkCategoryId?: string | null;
+  }>(contentEn);
+  let cards: SolutionCard[];
+  if (parsed && parsed.length > 0) {
+    cards = parsed.map((c) => ({
+      nameEn: typeof c.nameEn === "string" ? c.nameEn : "",
+      nameCn: typeof c.nameCn === "string" ? c.nameCn : "",
+      descEn: typeof c.descEn === "string" ? c.descEn : "",
+      descCn: typeof c.descCn === "string" ? c.descCn : "",
+      image: typeof c.image === "string" ? c.image : "",
+      linkCategoryId:
+        typeof c.linkCategoryId === "string" && c.linkCategoryId.length > 0
+          ? c.linkCategoryId
+          : null,
+    }));
+  } else {
+    // The categories API returns a tree whose root array IS the L1 categories.
+    const top = (categories ?? []).slice(0, 4);
+    cards = top.map((c) => ({
+      nameEn: c.nameEn,
+      nameCn: c.nameCn,
+      descEn: c.descEn ?? "",
+      descCn: c.descCn ?? "",
+      image: c.image ?? "",
+      linkCategoryId: c.id,
+    }));
+  }
+
   return (
     <BlockWrapper className="bg-card/40 border-y border-border">
       <div className="text-center mb-10">
-        {content ? (
-          <p className="text-brand text-sm font-semibold tracking-wider uppercase mb-1">
-            {content}
-          </p>
-        ) : null}
         {title ? (
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             {title}
@@ -517,18 +565,22 @@ function SolutionCardsBlock({
         ) : null}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {top.map((c, i) => {
-          const name = pick(c.nameEn, c.nameCn, lang) ?? "";
-          const desc = pick(c.descEn, c.descCn, lang) ?? "";
-          const img = c.image;
+        {cards.map((card, i) => {
+          const name = pick(card.nameEn, card.nameCn, lang) ?? "";
+          const desc = pick(card.descEn, card.descCn, lang) ?? "";
+          const img = card.image;
           return (
             <motion.button
-              key={c.id}
+              key={i}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              onClick={() => go({ name: "products", categoryId: c.id })}
+              onClick={() =>
+                card.linkCategoryId
+                  ? go({ name: "products", categoryId: card.linkCategoryId })
+                  : go({ name: "products" })
+              }
               className="group relative aspect-[4/5] sm:aspect-[3/4] rounded-xl overflow-hidden border border-border hover:border-brand transition-colors"
             >
               {img ? (

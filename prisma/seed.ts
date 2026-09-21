@@ -195,8 +195,13 @@ async function main() {
       type: "solution-cards",
       titleEn: "Where We Help",
       titleCn: "应用领域",
-      contentEn: "Solutions",
-      contentCn: "解决方案",
+      // Self-contained JSON card payload — the block is fully editable in
+      // PageManager (image/name/description bilingual). linkCategoryId is
+      // omitted at seed time (the home blocks are created BEFORE the L1
+      // categories, so their ids aren't available yet). The admin can wire the
+      // per-card click target later if desired.
+      contentEn:
+        '[{"nameEn":"Loudspeakers","nameCn":"扬声器","descEn":"Professional loudspeakers for every venue and application.","descCn":"为各类场馆与应用打造的专业扬声器。","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/ab67df55ab17.jpg"},{"nameEn":"Amplifiers","nameCn":"功放","descEn":"Touring-grade amplifiers with integrated DSP.","descCn":"集成 DSP 的巡演级功放。","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/af4ca9017221.jpg"},{"nameEn":"Mixers & Processors","nameCn":"调音台与处理器","descEn":"Digital mixers and signal processors.","descCn":"数字调音台与信号处理器。","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/3493e548b310.jpg"},{"nameEn":"Wireless & Microphones","nameCn":"无线与话筒","descEn":"Wireless systems and microphones.","descCn":"无线系统与话筒。","image":"https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/f84edc63ffde.webp"}]',
       order: 4,
     },
     {

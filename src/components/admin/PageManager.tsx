@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useI18n, tr } from "@/store/i18n";
 import {
+  useCategoriesAdmin,
   useCreateBlock,
   useCreatePage,
   useDeleteBlock,
@@ -58,7 +59,7 @@ import {
   useUpdatePage,
 } from "./hooks";
 import { ImageUploader } from "./ImageUploader";
-import type { ContentBlock, ContentBlockType, SitePage } from "./types";
+import type { Category, ContentBlock, ContentBlockType, SitePage } from "./types";
 import { cn } from "@/lib/utils";
 import { STATS, DEFAULT_FEATURES, DEFAULT_NEWS, type NewsItem } from "@/components/public/ContentBlock";
 
@@ -575,7 +576,7 @@ function BlockRow({
   );
 }
 
-/* ----------------------- Structured content editors (stats / features / news) ----------------------- */
+/* ----------------------- Structured content editors (stats / features / news / solution-cards) ----------------------- */
 
 type StatsRow = { value: string; labelEn: string; labelCn: string };
 type FeaturesRow = {
@@ -585,6 +586,14 @@ type FeaturesRow = {
   descCn: string;
 };
 type NewsRow = NewsItem;
+type SolutionCardRow = {
+  nameEn: string;
+  nameCn: string;
+  descEn: string;
+  descCn: string;
+  image: string;
+  linkCategoryId: string; // "" = no link (go to all products)
+};
 
 function emptyStatsRow(): StatsRow {
   return { value: "", labelEn: "", labelCn: "" };
@@ -603,6 +612,16 @@ function emptyNewsRow(): NewsRow {
     tagEn: "",
     tagCn: "",
     image: "",
+  };
+}
+function emptySolutionCardRow(): SolutionCardRow {
+  return {
+    nameEn: "",
+    nameCn: "",
+    descEn: "",
+    descCn: "",
+    image: "",
+    linkCategoryId: "",
   };
 }
 
@@ -744,6 +763,85 @@ function serializeNewsRows(rows: NewsRow[]): string {
   const cleaned = rows.filter(
     (r) => r.titleEn.trim() !== "" || r.titleCn.trim() !== ""
   );
+  return cleaned.length > 0 ? JSON.stringify(cleaned) : "";
+}
+
+/** Parse contentEn into a solution-card row list; falls back to AUTO-PULLING
+ *  the L1 categories (mapped to rows) so the admin sees (and can edit) exactly
+ *  what the public currently shows — same "what you see is what you edit" rule
+ *  as the stats / features / news-list editors. */
+function parseSolutionCards(
+  raw: string | null | undefined,
+  l1Categories: Category[] | null | undefined
+): SolutionCardRow[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw ?? "");
+  } catch {
+    parsed = null;
+  }
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    const rows = parsed.map((r): SolutionCardRow => ({
+      nameEn:
+        r && typeof (r as SolutionCardRow).nameEn === "string" ? (r as SolutionCardRow).nameEn : "",
+      nameCn:
+        r && typeof (r as SolutionCardRow).nameCn === "string" ? (r as SolutionCardRow).nameCn : "",
+      descEn:
+        r && typeof (r as SolutionCardRow).descEn === "string" ? (r as SolutionCardRow).descEn : "",
+      descCn:
+        r && typeof (r as SolutionCardRow).descCn === "string" ? (r as SolutionCardRow).descCn : "",
+      image:
+        r && typeof (r as SolutionCardRow).image === "string" ? (r as SolutionCardRow).image : "",
+      linkCategoryId:
+        r && typeof (r as SolutionCardRow).linkCategoryId === "string"
+          ? (r as SolutionCardRow).linkCategoryId
+          : "",
+    }));
+    if (rows.length > 0) return rows;
+  }
+  // Fallback: map the L1 categories to rows so the editor shows the current
+  // cards (which on the public site auto-pull from those same L1 categories).
+  const top = (l1Categories ?? []).slice(0, 4);
+  if (top.length === 0) {
+    return [
+      emptySolutionCardRow(),
+      emptySolutionCardRow(),
+      emptySolutionCardRow(),
+      emptySolutionCardRow(),
+    ];
+  }
+  return top.map((c) => ({
+    nameEn: c.nameEn,
+    nameCn: c.nameCn,
+    descEn: c.descEn ?? "",
+    descCn: c.descCn ?? "",
+    image: c.image ?? "",
+    linkCategoryId: c.id,
+  }));
+}
+
+/** Serialize solution-card rows to a JSON string, dropping rows with empty
+ *  nameEn AND nameCn AND no image. Returns "" if all rows are dropped. */
+function serializeSolutionCards(rows: SolutionCardRow[]): string {
+  const cleaned = rows
+    .filter(
+      (r) =>
+        r.nameEn.trim() !== "" ||
+        r.nameCn.trim() !== "" ||
+        r.image.trim() !== ""
+    )
+    .map((r) => ({
+      nameEn: r.nameEn,
+      nameCn: r.nameCn,
+      descEn: r.descEn,
+      descCn: r.descCn,
+      image: r.image,
+      // Drop linkCategoryId from the JSON when empty so the public block uses
+      // the "go to all products" branch instead of an invalid id.
+      ...(r.linkCategoryId.trim() !== ""
+        ? { linkCategoryId: r.linkCategoryId.trim() }
+        : {}),
+    }));
   return cleaned.length > 0 ? JSON.stringify(cleaned) : "";
 }
 
@@ -999,6 +1097,118 @@ function NewsListEditor({
   );
 }
 
+function SolutionCardsEditor({
+  rows,
+  l1Categories,
+  onUpdate,
+  onAdd,
+  onRemove,
+}: {
+  rows: SolutionCardRow[];
+  l1Categories: Category[];
+  onUpdate: (i: number, field: keyof SolutionCardRow, value: string) => void;
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+}) {
+  const lang = useI18n((s) => s.lang);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          {lang === "cn" ? "应用领域卡片" : "Solution Cards"}
+        </Label>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="size-3.5" />
+          {lang === "cn" ? "添加" : "Add"}
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {lang === "cn"
+          ? "每张卡的图片/名称/描述在此直接编辑；可选关联一个分类作为点击跳转。"
+          : "Edit each card's image/name/description here; optionally link a category for the click target."}
+      </p>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border/60 bg-muted/30 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-2">
+                <Input
+                  placeholder={lang === "cn" ? "名称 (EN)" : "Name (EN)"}
+                  value={row.nameEn}
+                  onChange={(e) => onUpdate(i, "nameEn", e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "cn" ? "名称 (中文)" : "Name (中文)"}
+                  value={row.nameCn}
+                  onChange={(e) => onUpdate(i, "nameCn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "描述 (EN)" : "Description (EN)"}
+                  value={row.descEn}
+                  onChange={(e) => onUpdate(i, "descEn", e.target.value)}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder={lang === "cn" ? "描述 (中文)" : "Description (中文)"}
+                  value={row.descCn}
+                  onChange={(e) => onUpdate(i, "descCn", e.target.value)}
+                />
+                <div className="md:col-span-2">
+                  <ImageUploader
+                    label={lang === "cn" ? "卡片图片" : "Card Image"}
+                    value={row.image}
+                    onChange={(url) => onUpdate(i, "image", url)}
+                    previewClassName="h-24 w-40"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {lang === "cn" ? "点击跳转的分类（可选）" : "Link Category (optional)"}
+                  </Label>
+                  <Select
+                    value={row.linkCategoryId || "__all__"}
+                    onValueChange={(v) =>
+                      onUpdate(i, "linkCategoryId", v === "__all__" ? "" : v)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">
+                        {lang === "cn" ? "全部产品 / All products" : "All products / 全部产品"}
+                      </SelectItem>
+                      {l1Categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {lang === "cn" ? c.nameCn : c.nameEn}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onRemove(i)}
+                title={lang === "cn" ? "删除" : "Remove"}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------- Block dialog (add/edit) ----------------------- */
 
 function BlockDialog({
@@ -1015,6 +1225,14 @@ function BlockDialog({
   const lang = useI18n((s) => s.lang);
   const createBlock = useCreateBlock();
   const updateBlock = useUpdateBlock();
+  const { data: categoriesData } = useCategoriesAdmin();
+  // useCategoriesAdmin returns the full tree whose root array IS the L1
+  // categories — those are the options the solution-cards editor offers for
+  // the per-card "link to category" dropdown.
+  const l1Categories = React.useMemo<Category[]>(
+    () => (categoriesData ?? []) as Category[],
+    [categoriesData]
+  );
   const [open, setOpen] = React.useState(false);
 
   const [form, setForm] = React.useState({
@@ -1042,6 +1260,14 @@ function BlockDialog({
     emptyNewsRow(),
     emptyNewsRow(),
   ]);
+  const [solutionCardRows, setSolutionCardRows] = React.useState<
+    SolutionCardRow[]
+  >(() => [
+    emptySolutionCardRow(),
+    emptySolutionCardRow(),
+    emptySolutionCardRow(),
+    emptySolutionCardRow(),
+  ]);
 
   // Initialize form + structured rows when the dialog opens (or the block prop
   // changes after a refetch). Rows are re-derived from the saved contentEn
@@ -1064,7 +1290,9 @@ function BlockDialog({
       setFeaturesRows(parseFeaturesRows(nextForm.contentEn));
     else if (nextForm.type === "news-list")
       setNewsRows(parseNewsRows(nextForm.contentEn));
-  }, [open, block]);
+    else if (nextForm.type === "solution-cards")
+      setSolutionCardRows(parseSolutionCards(nextForm.contentEn, l1Categories));
+  }, [open, block, l1Categories]);
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -1082,6 +1310,8 @@ function BlockDialog({
       setFeaturesRows(parseFeaturesRows(form.contentEn));
     else if (nextType === "news-list")
       setNewsRows(parseNewsRows(form.contentEn));
+    else if (nextType === "solution-cards")
+      setSolutionCardRows(parseSolutionCards(form.contentEn, l1Categories));
   }
 
   function updateStatsRow(i: number, field: keyof StatsRow, value: string) {
@@ -1136,14 +1366,36 @@ function BlockDialog({
     setForm((f) => ({ ...f, contentEn: serializeNewsRows(next) }));
   }
 
+  function updateSolutionCardRow(
+    i: number,
+    field: keyof SolutionCardRow,
+    value: string
+  ) {
+    const next = solutionCardRows.map((r, idx) =>
+      idx === i ? { ...r, [field]: value } : r
+    );
+    setSolutionCardRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeSolutionCards(next) }));
+  }
+  function addSolutionCardRow() {
+    setSolutionCardRows((prev) => [...prev, emptySolutionCardRow()]);
+  }
+  function removeSolutionCardRow(i: number) {
+    const next = solutionCardRows.filter((_, idx) => idx !== i);
+    setSolutionCardRows(next);
+    setForm((f) => ({ ...f, contentEn: serializeSolutionCards(next) }));
+  }
+
   async function onSave() {
-    // For stats / features / news-list, all bilingual data lives inside
-    // contentEn JSON; contentCn is unused — clear it so no stale text lingers
-    // when a block is switched from text/hero/etc. into a structured type.
+    // For stats / features / news-list / solution-cards, all bilingual data
+    // lives inside contentEn JSON; contentCn is unused — clear it so no stale
+    // text lingers when a block is switched from text/hero/etc. into a
+    // structured type.
     const isStructured =
       form.type === "stats" ||
       form.type === "features" ||
-      form.type === "news-list";
+      form.type === "news-list" ||
+      form.type === "solution-cards";
     const data = {
       type: form.type,
       titleEn: form.titleEn || null,
@@ -1248,6 +1500,14 @@ function BlockDialog({
               onUpdate={updateNewsRow}
               onAdd={addNewsRow}
               onRemove={removeNewsRow}
+            />
+          ) : form.type === "solution-cards" ? (
+            <SolutionCardsEditor
+              rows={solutionCardRows}
+              l1Categories={l1Categories}
+              onUpdate={updateSolutionCardRow}
+              onAdd={addSolutionCardRow}
+              onRemove={removeSolutionCardRow}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
